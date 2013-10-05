@@ -51,37 +51,38 @@ var tiles = {};
 var styles = {
     water: {
         color: {
-            default: [25, 150, 220]
+            default: [0, 0, 255] // [25, 150, 220]
         }
     },
     land: {
         color: {
-            default: [32, 200, 125]
+            default: [0, 255, 0] // [32, 200, 125]
         }
     },
     buildings: {
         color: {
-            default: [150, 150, 150]
+            default: [128, 128, 128] // [150, 150, 150]
         },
-        border: [75, 75, 75],
+        // border: [75, 75, 75],
         // dash: {
         //     default: [4, 2]
         // }
     },
     roads: {
         color: {
-            'highway': [0, 0, 0],
-            'major_road': [100, 100, 100],
-            'minor_road': [150, 150, 150],
-            'path': [255, 255, 255],
-            'rail': [0, 0, 0]
+            // 'highway': [0, 0, 0],
+            // 'major_road': [100, 100, 100],
+            // 'minor_road': [150, 150, 150],
+            // 'path': [255, 255, 255],
+            // 'rail': [0, 0, 0]
+            default: [255, 0, 0]
         },
         size: {
-            'highway': 5,
-            'major_road': 2.5,
-            'minor_road': 1.5,
-            'path': 0.5,
-            'rail': 0.5
+            'highway': 20, // 5,
+            'major_road': 10, // 2.5,
+            'minor_road': 6, // 1.5,
+            'path': 2, // 0.5,
+            'rail': 2 // 0.5
         },
         dash: {
             // 'rail': [4, 2]
@@ -348,6 +349,7 @@ function renderTile (tile, context)
     var land = tile['land-usages'].features;
     land.forEach(function(feature) {
         feature.geometry.pixels = scaleGeometryToPixels(feature.geometry, tile.min, tile.max);
+        renderGeometry(feature.geometry, feature.properties, styles.land, context);
 
         if (feature.properties.name != null && feature.properties.name != '') {
             selection_color = generateColor(selection.colors);
@@ -355,11 +357,11 @@ function renderTile (tile, context)
             selection_count++;
 
             // Draw named land areas in a darker shade
-            renderGeometry(feature.geometry, feature.properties, { color: { default: styles.land.color.default.map(function (c) { return Math.max(c - 30, 0); }) } }, context);
+            // renderGeometry(feature.geometry, feature.properties, { color: { default: styles.land.color.default.map(function (c) { return Math.max(c - 30, 0); }) } }, context);
             renderGeometry(feature.geometry, feature.properties, { color: { default: selection_color.color } }, selection_context);
         }
         else {
-            renderGeometry(feature.geometry, feature.properties, styles.land, context);
+            // renderGeometry(feature.geometry, feature.properties, styles.land, context);
             renderGeometry(feature.geometry, feature.properties, { color: { default: [0, 0, 0] } }, selection_context);
         }
     });
@@ -424,14 +426,14 @@ function renderTile (tile, context)
         feature.geometry.pixels = scaleGeometryToPixels(feature.geometry, tile.min, tile.max);
 
         if (feature.properties.name != null && feature.properties.name != '') {
-            context.fillStyle = 'rgb(240, 0, 0)';
-            context.strokeStyle = 'rgb(240, 240, 240)';
-            context.lineWidth = 2;
+            context.fillStyle = 'rgb(255, 255, 255)'; // 'rgb(240, 0, 0)';
+            // context.strokeStyle = 'rgb(240, 240, 240)';
+            // context.lineWidth = 2;
             context.beginPath();
             context.arc(feature.geometry.pixels.x, feature.geometry.pixels.y, 5, 0, 2 * Math.PI);
             context.closePath();
             context.fill();
-            context.stroke();
+            // context.stroke();
 
             selection_color = generateColor(selection.colors);
             selection_color.properties = feature.properties;
@@ -445,44 +447,177 @@ function renderTile (tile, context)
         }
     });
 
+    quantizeTile(context);
+
     // Selection events
-    if (selection_count > 0) {
-        if (tiles[tile.key] == null) {
-            tiles[tile.key] = {};
-        }
-        tiles[tile.key].selection = selection;
+    // if (selection_count > 0) {
+    //     if (tiles[tile.key] == null) {
+    //         tiles[tile.key] = {};
+    //     }
+    //     tiles[tile.key].selection = selection;
 
-        selection.pixels = new Uint32Array(selection_context.getImageData(0, 0, selection_canvas.width, selection_canvas.height).data.buffer);
+    //     selection.pixels = new Uint32Array(selection_context.getImageData(0, 0, selection_canvas.width, selection_canvas.height).data.buffer);
 
-        context.canvas.onmousemove = function (event) {
-            var off = event.offsetY * tile_size.x + event.offsetX;
-            var color = selection.pixels[off];
-            var feature = selection.colors[color];
-            if (feature != null) {
-                context.canvas.style.cursor = 'crosshair';
-                selection_info.style.left = (parseInt(context.canvas.style.left) + event.offsetX + 5) + 'px';
-                selection_info.style.top = (parseInt(context.canvas.style.top) + event.offsetY + 5) + 'px';
-                selection_info.innerHTML = '<span class="labelInner">' + feature.properties.name + /*' [' + feature.properties.kind + ']*/'</span>';
-                selection_info.style.display = 'block';
-                context.canvas.parentNode.appendChild(selection_info);
+    //     context.canvas.onmousemove = function (event) {
+    //         var off = event.offsetY * tile_size.x + event.offsetX;
+    //         var color = selection.pixels[off];
+    //         var feature = selection.colors[color];
+    //         if (feature != null) {
+    //             context.canvas.style.cursor = 'crosshair';
+    //             selection_info.style.left = (parseInt(context.canvas.style.left) + event.offsetX + 5) + 'px';
+    //             selection_info.style.top = (parseInt(context.canvas.style.top) + event.offsetY + 5) + 'px';
+    //             selection_info.innerHTML = '<span class="labelInner">' + feature.properties.name + /*' [' + feature.properties.kind + ']*/'</span>';
+    //             selection_info.style.display = 'block';
+    //             context.canvas.parentNode.appendChild(selection_info);
+    //         }
+    //         else {
+    //             context.canvas.style.cursor = null;
+    //             selection_info.style.display = 'none';
+    //             if (selection_info.parentNode == context.canvas.parentNode) {
+    //                 context.canvas.parentNode.removeChild(selection_info);
+    //             }
+    //         }
+    //     };
+    // }
+    // else {
+    //     context.canvas.onmousemove = function (event) {
+    //         context.canvas.style.cursor = null;
+    //         selection_info.style.display = 'none';
+    //         if (selection_info.parentNode == context.canvas.parentNode) {
+    //             context.canvas.parentNode.removeChild(selection_info);
+    //         }
+    //     };
+    // }
+}
+
+// Load a set of images and callback when done
+var loaded_images = {};
+function loadImages (images, base_url, success)
+{
+    var track_images = [];
+
+    if (images.length > 0) {
+        // Setup image load callbacks
+        images.forEach(function (image) {
+            var i;
+            if (loaded_images[image] == null || loaded_images[image].loaded == false) {
+                i = new Image();
+                i.onload = imageLoadComplete;
+                i.loading = true;
+                i.loaded = false;
+                loaded_images[image] = i;
             }
-            else {
-                context.canvas.style.cursor = null;
-                selection_info.style.display = 'none';
-                if (selection_info.parentNode == context.canvas.parentNode) {
-                    context.canvas.parentNode.removeChild(selection_info);
+            track_images.push(loaded_images[image]);
+        });
+
+        // Start images actually loading
+        images.forEach(function (image) {
+            loaded_images[image].src = base_url + image;
+        });
+    }
+
+    // Mark each image as done and call success function when no more images loading
+    function imageLoadComplete () {
+        this.loading = false;
+        this.loaded = true;
+
+        for (var i in track_images) {
+            if (track_images[i].loading == true) {
+                return;
+            }
+        }
+
+        if (success != null) {
+            success(images);
+        }
+    }
+}
+
+// RGB(A) component array to 32-bit color
+function rgba32 (color)
+{
+    return (color[0] | (color[1] << 8) | (color[2] << 16) | ((color[3] || 255) << 24)) >>> 0;
+}
+
+// Apply '8-bit' style to rendered tile
+var eight_bit_tile_images = ['road.png', 'building.png', 'ground.png', 'water.png', 'tree.png', 'stone.png'];
+var eight_bit_base_url = 'images/';
+
+function quantizeTile (context)
+{
+    var pixels = new Uint32Array(context.getImageData(0, 0, context.canvas.width, context.canvas.height).data.buffer);
+
+    // Layers will be matched in this order ('top-down')
+    var match_default = 'ground';
+    var match_types = [
+        {
+            type: 'building',
+            color: rgba32([255, 255, 255]),
+            threshold: 0.01
+        },
+        {
+            type: 'road',
+            color: rgba32(styles.roads.color.default),
+            threshold: 0.25
+        },
+        {
+            type: 'stone',
+            color: rgba32(styles.buildings.color.default),
+            threshold: 0.2
+        },
+        {
+            type: 'water',
+            color: rgba32(styles.water.color.default),
+            threshold: 0.01
+        },
+        {
+            type: 'tree',
+            color: rgba32(styles.land.color.default),
+            threshold: 0.01
+        }
+    ];
+    var match, match_counts = {}, match_colors = {};
+    var x, y, u, v, m, mt, mc, p;
+
+    // Color look-up
+    match_types.forEach(function (mt) {
+        match_colors[mt.color] = mt;
+    });
+
+    for (y=0; y < 8; y++) {
+        for (x=0; x < 8; x++) {
+            // Zero out match counts
+            match_types.forEach(function (mt) {
+                match_counts[mt.type] = 0;
+            });
+
+            // Count types per pixel
+            for (v=0; v < 32; v++) {
+                p = (((y << 5) + v) << 8) + (x << 5);
+                for (u=0; u < 32; u++) {
+                    mc = match_colors[pixels[p]];
+                    if (mc != null) {
+                        match_counts[mc.type]++;
+                    }
+                    p++;
                 }
             }
-        };
-    }
-    else {
-        context.canvas.onmousemove = function (event) {
-            context.canvas.style.cursor = null;
-            selection_info.style.display = 'none';
-            if (selection_info.parentNode == context.canvas.parentNode) {
-                context.canvas.parentNode.removeChild(selection_info);
+
+            // Check layer thresholds
+            match = match_default;
+            for (m=0; m < match_types.length; m++) {
+                mt = match_types[m];
+                if (match_counts[mt.type] > 0 && match_counts[mt.type] / 1024 >= mt.threshold) {
+                    match = mt.type;
+                    break;
+                }
             }
-        };
+
+            // Draw new subtile
+            // context.globalAlpha = 0.75; // transparent layer for debugging
+            context.drawImage(loaded_images[match + '.png'], x << 5, y << 5);
+            // context.globalAlpha = 1.0;
+        }
     }
 }
 
@@ -497,8 +632,8 @@ var map = L.map('map');
 map.attributionControl.setPrefix('');
 
 // Get location from URL or use default
-var map_default_location = [51.508, -0.105]; // [40.784702, -73.965452], [40.7180764, -73.9790335]
-var map_default_zoom = 15;
+var map_default_location = [51.50621826506825, -0.1147770881652832]; // [51.508, -0.105], [40.784702, -73.965452]
+var map_default_zoom = 16; // 15
 var url_latlng = window.location.hash.slice(1, window.location.hash.length).split(',');
 if (url_latlng.length == 3) {
     map.setView([url_latlng[0], url_latlng[1]], url_latlng[2]);
@@ -552,7 +687,10 @@ layer.drawTile = function(canvas, tilePoint, zoom) {
     req.send();
 }
 
-layer.addTo(map);
+// Load images and activate map
+loadImages(eight_bit_tile_images, eight_bit_base_url, function () {
+    layer.addTo(map);
+});
 
 </script>
 </body>
