@@ -103,6 +103,13 @@ var tile_sources = {
         },
         layers: 'gl_layers_mvt.js',
         styles: 'gl_styles.js'
+    },
+    'gps': {
+        source: {
+            type: 'OpenStreetMapGPSTileSource'
+        },
+        layers: 'gl_layers_json.js',
+        styles: 'gl_styles.js'
     }
 };
 
@@ -174,7 +181,7 @@ var layer = L.vectorTileLayer({
     vectorTileSource: tile_sources[tile_source].source,
     vectorLayers: tile_sources[tile_source].layers,
     vectorStyles: tile_sources[tile_source].styles,
-    numWorkers: 1,
+    numWorkers: 4,
     attribution: 'Map data &copy; OpenStreetMap contributors | <a href="https://github.com/bcamper/vector-map">Source Code</a>',
     unloadInvisibleTiles: false,
     updateWhenIdle: false

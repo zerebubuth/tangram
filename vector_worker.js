@@ -1,3 +1,4 @@
+importScripts('lib/tinyxmlsax.js', 'lib/tinyxmlw3cdom.js', 'lib/togeojson.js' + '?' + (+new Date()));
 importScripts('dist/vector-map-worker.min.js' + '?' + (+new Date()));
 
 // Include individual scripts instead for debugging

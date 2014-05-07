@@ -150,3 +150,80 @@ MapboxTileSource.prototype._loadTile = function (tile, renderer)
         };
     }
 };
+
+
+/*** OSM GPS traces ***/
+// http://api.openstreetmap.org/api/0.6/trackpoints?page=0&bbox=left,bottom,right,top5
+
+TileSource.OpenStreetMapGPSTileSource = OpenStreetMapGPSTileSource;
+OpenStreetMapGPSTileSource.prototype = Object.create(TileSource.prototype);
+
+function OpenStreetMapGPSTileSource (url_template, options)
+{
+    TileSource.apply(this, arguments);
+
+    this.url_template = this.url_template || "http://api.openstreetmap.org/api/0.6/trackpoints?page=0&bbox=";
+}
+
+OpenStreetMapGPSTileSource.prototype.loadTile = function (tile, renderer, callback)
+{
+    var tile_source = this;
+
+    var sw = Geo.metersToLatLng(tile.bounds.sw);
+    var ne = Geo.metersToLatLng(tile.bounds.ne);
+    var url = this.url_template + [sw.x, sw.y, ne.x, ne.y].join(',');
+
+    var req = new XMLHttpRequest();
+
+    tile.url = url;
+    tile.xhr = req;
+    tile.debug.network = +new Date();
+
+    req.onload = function () {
+        // Canceled while loading?
+        if (tile.loading == false) {
+            return;
+        }
+
+        tile.debug.network = +new Date() - tile.debug.network;
+
+        if (tile_source._loadTile) {
+            tile.debug.parsing = +new Date();
+            tile_source._loadTile(tile, renderer);
+            tile.debug.parsing = +new Date() - tile.debug.parsing;
+        }
+
+        tile.xhr = null;
+        tile.loading = false;
+        tile.loaded = true;
+
+        if (callback) {
+            callback(tile);
+        }
+    };
+    // TODO: add XHR error handling
+    // req.responseType = this.response_type;
+    req.open('GET', url, true); // async flag
+    req.send();
+};
+
+OpenStreetMapGPSTileSource.prototype._loadTile = function (tile, renderer)
+{
+    // var dom = (new DOMParser()).parseFromString(tile.xhr.response, 'text/xml'); // web workers don't have access to standard DOM parser
+    var parser = new DOMImplementation();
+    var dom = parser.loadXML(tile.xhr.response);
+    var doc = dom.getDocumentElement();
+    var gps = toGeoJSON.gpx(doc);
+
+    // Split lines for traces with large gaps between points
+    for (var f=0; f < gps.features.length; f++) {
+        gps.features[f] = Geo.splitFeatureLines(gps.features[f], 0.001);
+    }
+
+    tile.layers = {
+        gps: gps
+    };
+
+    TileSource.projectTile(tile); // mercator projection
+    TileSource.scaleTile(tile); // re-scale from meters to local tile coords
+};

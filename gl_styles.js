@@ -85,5 +85,14 @@
         extrude: {
             default: function (f, t) { return ((t.coords.z >= 15 && f.properties.height > 20) || t.coords.z >= 16) }
         }
+    },
+    gps: {
+        color: {
+            default: Style.color.randomColor
+        },
+        width: {
+            default: function (f, t) { return Style.width.pixels(2, t); }
+            // default: function (f, t) { return 2 * Math.log(t.coords.z) * VectorRenderer.units_per_meter[t.coords.z]; }
+        }
     }
 }
