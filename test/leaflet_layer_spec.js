@@ -46,7 +46,7 @@ describe('Leaflet plugin', () => {
 
         beforeEach(function (done) {
             subject = makeOne();
-            sinon.spy(map, 'getContainer');
+            sinon.spy(subject, 'getContainer');
             sinon.spy(subject.scene, 'init');
 
             subject.on('init', () => {
@@ -59,11 +59,10 @@ describe('Leaflet plugin', () => {
 
         afterEach(() => {
             subject.remove();
-            map.getContainer.restore();
         });
 
-        it('calls the map\'s .getContainer() method', () => {
-            sinon.assert.called(map.getContainer);
+        it('calls the layers\'s .getContainer() method', () => {
+            sinon.assert.called(subject.getContainer);
         });
 
         it('initializes the scene', () => {

@@ -24,7 +24,7 @@ export var LeafletLayer = L.GridLayer.extend({
     },
 
     // Finish initializing scene and setup events when layer is added to map
-    onAdd: function () {
+    onAdd: function (map) {
         if (!this.scene) {
             this.createScene();
         }
@@ -44,68 +44,73 @@ export var LeafletLayer = L.GridLayer.extend({
         this.on('tileunload', this.hooks.tileunload);
 
         this.hooks.resize = () => {
-            var size = this._map.getSize();
+            var size = map.getSize();
             this.scene.resizeMap(size.x, size.y);
         };
-        this._map.on('resize', this.hooks.resize);
+        map.on('resize', this.hooks.resize);
 
         this.hooks.move = () => {
-            var center = this._map.getCenter();
+            var center = map.getCenter();
             this.scene.setCenter(center.lng, center.lat);
             this.scene.immediateRedraw();
-            this.reverseTransform();
+            this.reverseTransform(map);
         };
-        this._map.on('move', this.hooks.move);
+        map.on('move', this.hooks.move);
 
         this.hooks.zoomstart = () => {
             this.scene.startZoom();
         };
-        this._map.on('zoomstart', this.hooks.zoomstart);
+        map.on('zoomstart', this.hooks.zoomstart);
 
         this.hooks.zoomend = () => {
-            this.scene.setZoom(this._map.getZoom());
+            this.scene.setZoom(map.getZoom());
         };
-        this._map.on('zoomend', this.hooks.zoomend);
+        map.on('zoomend', this.hooks.zoomend);
 
         this.hooks.dragstart = () => {
             this.scene.panning = true;
         };
-        this._map.on('dragstart', this.hooks.dragstart);
+        map.on('dragstart', this.hooks.dragstart);
 
         this.hooks.dragend = () => {
             this.scene.panning = false;
         };
-        this._map.on('dragend', this.hooks.dragend);
+        map.on('dragend', this.hooks.dragend);
 
         // Canvas element will be inserted after map container (leaflet transforms shouldn't be applied to the GL canvas)
         // TODO: find a better way to deal with this? right now GL map only renders correctly as the bottom layer
-        // this.scene.container = this._map.getContainer();
+        // this.scene.container = map.getContainer();
         this.scene.container = this.getContainer();
 
         // Use leaflet's existing event system as the callback mechanism
+        var scene = this.scene;
         this.scene.init(() => {
-            // TODO: why is force-resize needed here?
-            var size = this._map.getSize();
-            this.scene.resizeMap(size.x, size.y);
+            // make sure the expected scene is being initialized
+            // can be another scene object if layer is removed and re-added before scene init completes
+            if (this.scene === scene) {
+                // TODO: why is force-resize needed here?
+                var size = map.getSize();
+                this.scene.resizeMap(size.x, size.y);
 
-            var center = this._map.getCenter();
-            this.scene.setCenter(center.lng, center.lat, this._map.getZoom());
-            this.reverseTransform();
+                var center = map.getCenter();
+                this.scene.setCenter(center.lng, center.lat, map.getZoom());
+                this.reverseTransform(map);
+            }
 
             this.fire('init');
         });
     },
 
-    onRemove: function () {
+    onRemove: function (map) {
         L.GridLayer.prototype.onRemove.apply(this, arguments);
 
         this.off('tileunload', this.hooks.tileunload);
-        this._map.off('resize', this.hooks.resize);
-        this._map.off('move', this.hooks.move);
-        this._map.off('zoomstart', this.hooks.zoomstart);
-        this._map.off('zoomend', this.hooks.zoomend);
-        this._map.off('dragstart', this.hooks.dragstart);
-        this._map.off('dragend', this.hooks.dragend);
+        map.off('resize', this.hooks.resize);
+        map.off('move', this.hooks.move);
+        map.off('zoomstart', this.hooks.zoomstart);
+        map.off('zoomend', this.hooks.zoomend);
+        map.off('dragstart', this.hooks.dragstart);
+        map.off('dragend', this.hooks.dragend);
         this.hooks = {};
 
         if (this.scene) {
@@ -122,12 +127,12 @@ export var LeafletLayer = L.GridLayer.extend({
 
     // Reverse the CSS transform Leaflet applies to the layer, since Tangram's WebGL canvas
     // is expected to be 'absolutely' positioned.
-    reverseTransform: function () {
-        if (!this.scene.canvas) {
+    reverseTransform: function (map) {
+        if (!map || !this.scene.canvas) {
             return;
         }
 
-        var pane = this._map.getPanes().mapPane;
+        var pane = map.getPanes().mapPane;
         var transform = pane.style.transform || pane.style['-webkit-transform'];
         var matrix = new CSSMatrix(transform).inverse();
         this.scene.canvas.style.transform = matrix;
