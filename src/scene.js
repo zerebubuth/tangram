@@ -96,7 +96,6 @@ Scene.prototype.init = function (callback) {
             this.canvas.style.position = 'absolute';
             this.canvas.style.top = 0;
             this.canvas.style.left = 0;
-            this.canvas.style.zIndex = -1;
             this.container.appendChild(this.canvas);
 
             this.gl = GL.getContext(this.canvas);
@@ -460,7 +459,7 @@ Scene.prototype.resetFrame = function () {
 
     // Reset frame state
     var gl = this.gl;
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // TODO: unnecessary repeat?

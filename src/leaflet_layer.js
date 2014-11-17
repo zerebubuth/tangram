@@ -1,4 +1,5 @@
 import Scene from './scene';
+import CSSMatrix from 'xcssmatrix';
 
 export var LeafletLayer = L.GridLayer.extend({
 
@@ -52,6 +53,7 @@ export var LeafletLayer = L.GridLayer.extend({
             var center = this._map.getCenter();
             this.scene.setCenter(center.lng, center.lat);
             this.scene.immediateRedraw();
+            this.reverseTransform();
         };
         this._map.on('move', this.hooks.move);
 
@@ -77,13 +79,19 @@ export var LeafletLayer = L.GridLayer.extend({
 
         // Canvas element will be inserted after map container (leaflet transforms shouldn't be applied to the GL canvas)
         // TODO: find a better way to deal with this? right now GL map only renders correctly as the bottom layer
-        this.scene.container = this._map.getContainer();
-
-        var center = this._map.getCenter();
-        this.scene.setCenter(center.lng, center.lat, this._map.getZoom());
+        // this.scene.container = this._map.getContainer();
+        this.scene.container = this.getContainer();
 
         // Use leaflet's existing event system as the callback mechanism
         this.scene.init(() => {
+            // TODO: why is force-resize needed here?
+            var size = this._map.getSize();
+            this.scene.resizeMap(size.x, size.y);
+
+            var center = this._map.getCenter();
+            this.scene.setCenter(center.lng, center.lat, this._map.getZoom());
+            this.reverseTransform();
+
             this.fire('init');
         });
     },
@@ -110,6 +118,14 @@ export var LeafletLayer = L.GridLayer.extend({
         var div = document.createElement('div');
         this.scene.loadTile(coords, div, done);
         return div;
+    },
+
+    // Reverse the CSS transform Leaflet applies to the layer, since Tangram's WebGL canvas
+    // is expected to be 'absolutely' positioned.
+    reverseTransform: function () {
+        var transform = this._map.getPanes().mapPane.style.transform;
+        var matrix = new CSSMatrix(transform).inverse();
+        this.scene.canvas.style.transform = matrix;
     },
 
     render: function () {

@@ -77,7 +77,7 @@
         'New York': [40.70531887544228, -74.00976419448853, 16],
         'Seattle': [47.609722, -122.333056, 15]
     };
-    var osm_debug = false;
+    var osm_debug = true;
 
     /***** GUI/debug controls *****/
 
@@ -143,7 +143,8 @@
     var map = L.map('map', {
         maxZoom: 20,
         inertia: false,
-        keyboard: false
+        keyboard: false,
+        zoomAnimation: false
     });
 
     var layer = Tangram.leafletLayer({
@@ -507,7 +508,7 @@
     // Create dat GUI
     var gui = new dat.GUI({ autoPlace: true });
     function addGUI () {
-        gui.domElement.parentNode.style.zIndex = 5;
+        gui.domElement.parentNode.style.zIndex = 10;
         window.gui = gui;
 
         // Add ability to remove a whole folder from DAT.gui
@@ -598,7 +599,17 @@
                 return;
             }
 
-            var pixel = { x: event.clientX, y: event.clientY };
+            // Normalize offsetXY
+            // See: http://www.jacklmoore.com/notes/mouse-position/
+            var target = event.target || event.srcElement,
+                style = target.currentStyle || window.getComputedStyle(target, null),
+                borderLeftWidth = parseInt(style['borderLeftWidth'], 10),
+                borderTopWidth = parseInt(style['borderTopWidth'], 10),
+                rect = target.getBoundingClientRect(),
+                offsetX = event.clientX - borderLeftWidth - rect.left,
+                offsetY = event.clientY - borderTopWidth - rect.top;
+
+            var pixel = { x: offsetX, y: offsetY };
 
             scene.getFeatureAt(
                 pixel,
@@ -623,7 +634,7 @@
                             selection_info.style.left = (pixel.x + 5) + 'px';
                             selection_info.style.top = (pixel.y + 15) + 'px';
                             selection_info.innerHTML = '<span class="labelInner">' + label + '</span>';
-                            scene.container.appendChild(selection_info);
+                            layer._map.getContainer().appendChild(selection_info);
                         }
                         else if (selection_info.parentNode != null) {
                             selection_info.parentNode.removeChild(selection_info);
@@ -687,15 +698,15 @@
 
             initFeatureSelection();
         });
-        layer.addTo(map);
+        layer.addTo(map).bringToFront();
 
         if (osm_debug == true) {
             window.osm_layer =
                 L.tileLayer(
                     'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    { opacity: 0.5 })
-                .bringToFront()
-                .addTo(map);
+                    { opacity: 1 })
+                .addTo(map)
+                .bringToBack();
         }
     });
 
