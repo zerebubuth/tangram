@@ -123,9 +123,15 @@ export var LeafletLayer = L.GridLayer.extend({
     // Reverse the CSS transform Leaflet applies to the layer, since Tangram's WebGL canvas
     // is expected to be 'absolutely' positioned.
     reverseTransform: function () {
-        var transform = this._map.getPanes().mapPane.style.transform;
+        if (!this.scene.canvas) {
+            return;
+        }
+
+        var pane = this._map.getPanes().mapPane;
+        var transform = pane.style.transform || pane.style['-webkit-transform'];
         var matrix = new CSSMatrix(transform).inverse();
         this.scene.canvas.style.transform = matrix;
+        this.scene.canvas.style['-webkit-transform'] = matrix;
     },
 
     render: function () {
