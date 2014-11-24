@@ -98,6 +98,9 @@ export var LeafletLayer = L.GridLayer.extend({
             }
 
             this.fire('init');
+        }, (error) => {
+            console.log('scene init error', error);
+            throw error;
         });
     },
 
