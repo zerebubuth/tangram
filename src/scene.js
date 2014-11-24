@@ -98,6 +98,7 @@ Scene.prototype.init = function () {
                 this.canvas.style.position = 'absolute';
                 this.canvas.style.top = 0;
                 this.canvas.style.left = 0;
+                this.canvas.style.zIndex = 0;
                 this.container.appendChild(this.canvas);
 
                 this.gl = GL.getContext(this.canvas);
@@ -769,7 +770,7 @@ Scene.prototype.loadTile = function (...args) {
 
 // Load all queued tiles
 Scene.prototype.loadQueuedTiles = function () {
-    if (!this.initialized) {
+    if (!this.initialized || !this.viewReady()) {
         return;
     }
 

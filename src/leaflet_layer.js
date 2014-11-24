@@ -1,5 +1,6 @@
 import Scene from './scene';
 import CSSMatrix from 'xcssmatrix';
+import log from 'loglevel';
 
 export var LeafletLayer = L.GridLayer.extend({
 
@@ -84,7 +85,7 @@ export var LeafletLayer = L.GridLayer.extend({
 
         // Use leaflet's existing event system as the callback mechanism
         var scene = this.scene;
-        this.scene.init(() => {
+        this.scene.init().then(() => {
             // make sure the expected scene is being initialized
             // can be another scene object if layer is removed and re-added before scene init completes
             if (this.scene === scene) {
@@ -99,7 +100,7 @@ export var LeafletLayer = L.GridLayer.extend({
 
             this.fire('init');
         }, (error) => {
-            console.log('scene init error', error);
+            log.error('scene init error', error);
             throw error;
         });
     },
