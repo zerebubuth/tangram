@@ -25,9 +25,7 @@
             }
         },
         "highway": {
-            "filter": {
-                "kind": "highway"
-            },
+            "filter": ["==", "kind", "highway"],
             "fill": {
                 "style": {
                     "color": [1, 1, 1],

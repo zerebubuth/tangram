@@ -1,5 +1,5 @@
 import {StyleParser} from './styles/style_parser';
-
+import ff from 'feature-filter';
 export var whiteList = ['filter', 'style', 'geometry'];
 
 function isWhiteListed(key) {
@@ -23,7 +23,6 @@ export function cloneStyle(target, source) {
     }
     return target;
 }
-
 
 // Merges a chain of parent-to-child styles into a single style object
 function mergeStyles(styles) {
@@ -70,12 +69,10 @@ export function matchFeature(context, rules, collectedRules) {
         if (current instanceof Rule) {
 
             if (current.calculatedStyle) {
-
                 if ((typeof current.filter === 'function' && current.filter(context)) || (current.filter === undefined)) {
                     matched = true;
                     collectedRules.push(current.calculatedStyle);
                 }
-
             } else {
                 throw new Error('A rule must have a style object');
             }
@@ -169,7 +166,12 @@ export function buildFilterObject(filter) {
 
 export function buildFilter(rule) {
     if (rule.filter) {
-        if (typeof rule.filter === 'object') {
+        if (Array.isArray(rule.filter)) {
+            let filter = ff(rule.filter);
+            return function (context) {
+                return filter(context.feature);
+            };
+        } else if (typeof rule.filter === 'object') {
             return buildFilterObject(rule.filter);
         } else  if (typeof rule.filter === 'function'){
             return rule.filter;
