@@ -175,6 +175,22 @@ Vector.dot = function (v1, v2) {
     return n;
 };
 
+Vector.toString = function (v) {
+    if(v.length){
+        var l = v.length;
+        var string = 'vec' + l.toString() + '(';
+        for (var i = 0; i < l; i++){
+            string += v[i].toFixed(8);
+            if(i < l-1){
+                string += ',';
+            }
+        }
+        return string + ')';
+    } else {
+        return v;
+    }
+};
+
 // Find the intersection of two lines specified as segments from points (p1, p2) and (p3, p4)
 // http://en.wikipedia.org/wiki/Line-line_intersection
 // http://en.wikipedia.org/wiki/Cramer's_rule

@@ -1,18 +1,31 @@
 import ShaderProgram from './gl/shader_program';
 import shaderSources from './gl/shader_sources'; // built-in shaders
 import GLSL from './gl/glsl';
+import {Vector} from './vector';
 
 // ABSTRACT LIGHT
 export default class Light {
 
     constructor (_scene, _config) {
-        this.name = _config.name;
         this.scene = _scene;
 
+        //  Get the light name, use for the uniform and variable names
+        //  inside the shader 
+        this.name = _config.name;
+        
+        //  DYNAMIC lights have their values pass as uniforms
+        //  while STATIC lights values are hardcoded on the shader program
+        this.dynamic = _config.dynamic || true;
+
+        // All lights share 3 different types of lighting
+        //  - Ambient: get's apply homogeniusly on the scene
+        //  - Diffuse: what we ussually understand as color
+        //  - Specular: highlights of a light reflected by glossy surfaces
         this.ambient = (_config.ambient || [0, 0, 0]).map(parseFloat);
         this.diffuse = (_config.diffuse || [1, 1, 1]).map(parseFloat);
         this.specular = (_config.specular || [0, 0, 0]).map(parseFloat);
 
+        // The shader is specting vec4 
         this.ambient = GLSL.expandVec4(this.ambient);
         this.diffuse = GLSL.expandVec4(this.diffuse);
         this.specular = GLSL.expandVec4(this.specular);
@@ -108,14 +121,33 @@ export default class Light {
 
     }
 
-    // Common instance definition
-    inject () {
-        let instance =  `
-            uniform ${this.struct_name} u_${this.name};
-            ${this.struct_name} g_${this.name} = u_${this.name};
-        `;
+    //  Instance block,  if is dynamic will create a uniform to get the values
+    //  if is static light will assign values directly inside the shader
+    getInstanceBlock () {
+        if (this.dynamic){
+            let str = `
+                uniform ${this.struct_name} u_${this.name};
+                ${this.struct_name} g_${this.name} = u_${this.name};
+            `;
+            return str;
+        } else {
+            let str = `
+                ${this.struct_name} g_${this.name} = ${this.struct_name}(${this.getInstanceAssignBlock()});
+            `;
+            return str;
+        }
+    }
 
-        ShaderProgram.addTransform(Light.transform, instance);
+    getInstanceAssignBlock () {
+        return  Vector.toString(this.ambient) + ',' + 
+                Vector.toString(this.diffuse) + ',' + 
+                Vector.toString(this.specular); 
+
+    }
+
+    // Common Instance injection
+    inject () {
+        ShaderProgram.addTransform(Light.transform, this.getInstanceBlock());
     }
 
     // Update method called once per frame
@@ -140,7 +172,7 @@ Light.transform = 'lighting';
 //
 class DirectionalLight extends Light {
 
-    constructor(_scene, _config) {
+    constructor (_scene, _config) {
         super(_scene, _config);
         this.type = 'directional';
         this.struct_name = 'DirectionalLight';
@@ -149,13 +181,20 @@ class DirectionalLight extends Light {
     }
 
     // DirectLigth Struct and function
-    static inject() {
+    static inject () {
         ShaderProgram.addTransform(Light.transform, shaderSources['gl/shaders/directionalLight']);
     }
 
+    getInstanceAssignBlock () {
+        return  super.getInstanceAssignBlock() + ',' +
+                Vector.toString(this.direction);
+    }
+
     setupProgram (_program) {
-        super.setupProgram(_program);
-        _program.uniform('3fv', 'u_'+this.name+'.direction', this.direction);
+        if (this.dynamic){
+            super.setupProgram(_program);
+            _program.uniform('3fv', 'u_'+this.name+'.direction', this.direction);
+        }
     }
 
 }
@@ -179,7 +218,7 @@ class PointLight extends Light {
         ShaderProgram.addTransform(Light.transform, shaderSources['gl/shaders/pointLight']);
     }
 
-    inject() {
+    inject () {
         super.inject();
 
         if(this.constantAttenuation !== 0){
@@ -193,25 +232,42 @@ class PointLight extends Light {
         }
     }
 
-    setupProgram (_program) {
-        super.setupProgram(_program);
-
-        _program.uniform('4f', 'u_'+this.name+'.position',
-            this.position[0] * this.scene.meters_per_pixel,
-            this.position[1] * this.scene.meters_per_pixel,
-            this.position[2] * this.scene.meters_per_pixel,
-            1);
-
+    getInstanceAssignBlock () {
+        let str =   super.getInstanceAssignBlock() + ',' +
+                    Vector.toString(this.position);
         if(ShaderProgram.defines['TANGRAM_POINTLIGHT_CONSTANT_ATTENUATION']){
-            _program.uniform('1f', 'u_'+this.name+'.constantAttenuation', this.constantAttenuation);
+            str += "," + this.constantAttenuation;
         }
-
         if(ShaderProgram.defines['TANGRAM_POINTLIGHT_LINEAR_ATTENUATION']){
-            _program.uniform('1f', 'u_'+this.name+'.linearAttenuation', this.linearAttenuation);
+            str += "," + this.linearAttenuation;
         }
-
         if(ShaderProgram.defines['TANGRAM_POINTLIGHT_QUADRATIC_ATTENUATION']){
-            _program.uniform('1f', 'u_'+this.name+'.quadraticAttenuation', this.quadraticAttenuation);
+            str += "," + this.quadraticAttenuation;
+        }
+        return str;
+    }
+
+    setupProgram (_program) {
+        if (this.dynamic) {
+            super.setupProgram(_program);
+
+            _program.uniform('4f', 'u_'+this.name+'.position',
+                this.position[0] * this.scene.meters_per_pixel,
+                this.position[1] * this.scene.meters_per_pixel,
+                this.position[2] * this.scene.meters_per_pixel,
+                1);
+
+            if (ShaderProgram.defines['TANGRAM_POINTLIGHT_CONSTANT_ATTENUATION']) {
+                _program.uniform('1f', 'u_'+this.name+'.constantAttenuation', this.constantAttenuation);
+            }
+
+            if (ShaderProgram.defines['TANGRAM_POINTLIGHT_LINEAR_ATTENUATION']) {
+                _program.uniform('1f', 'u_'+this.name+'.linearAttenuation', this.linearAttenuation);
+            }
+
+            if (ShaderProgram.defines['TANGRAM_POINTLIGHT_QUADRATIC_ATTENUATION']) {
+                _program.uniform('1f', 'u_'+this.name+'.quadraticAttenuation', this.quadraticAttenuation);
+            }
         }
     }
 }
@@ -235,13 +291,21 @@ class SpotLight extends PointLight {
         ShaderProgram.addTransform(Light.transform, shaderSources['gl/shaders/spotLight']);
     }
 
+    getInstanceAssignBlock () {
+        return  super.getInstanceAssignBlock() + ',' +
+                Vector.toString(this.direction) + ',' +
+                Math.cos(this.angle * 3.14159 / 180.0) + ',' +
+                this.exponent;
+    }
+
+
     setupProgram (_program) {
-        super.setupProgram(_program);
-
-        _program.uniform('3fv', 'u_'+this.name+'.direction', this.direction);
-
-        _program.uniform('1f', 'u_'+this.name+'.spotCosCutoff', Math.cos(this.angle * 3.14159 / 180.0) );
-        _program.uniform('1f', 'u_'+this.name+'.spotExponent', this.exponent);
+        if (this.dynamic){
+            super.setupProgram(_program);
+            _program.uniform('3fv', 'u_'+this.name+'.direction', this.direction);
+            _program.uniform('1f', 'u_'+this.name+'.spotCosCutoff', Math.cos(this.angle * 3.14159 / 180.0) );
+            _program.uniform('1f', 'u_'+this.name+'.spotExponent', this.exponent);
+        }
     }
 
 }

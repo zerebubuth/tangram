@@ -3,9 +3,6 @@ struct SpotLight {
     vec4 diffuse;
     vec4 specular;
     vec4 position;
-    vec3 direction;
-    float spotCosCutoff;
-    float spotExponent;
 
     #ifdef TANGRAM_SPOTLIGHT_CONSTANT_ATTENUATION
         #define TANGRAM_SPOTLIGHT_ATTENUATION
@@ -25,6 +22,10 @@ struct SpotLight {
         #endif
         float quadraticAttenuation;
     #endif
+
+    vec3 direction;
+    float spotCosCutoff;
+    float spotExponent;
 };
 
 void calculateLight(in SpotLight _light, in vec3 _eyeToPoint, in vec3 _normal) {
