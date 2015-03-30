@@ -245,6 +245,28 @@ StyleParser.parseColor = function(val, context = {}) {
     return val;
 };
 
+// Example:
+//     input: kind
+//     values:
+//         library: museum
+//     default: tree
+StyleParser.parsePropertyMap = function (map, context) {
+    let input;
+    if (typeof map.input === 'function') {
+        input = map.input(context);
+    }
+    else {
+        input = context.feature.properties[map.input];
+    }
+
+    for (let value in map.values) {
+        if (input === value) {
+            return map.values[value];
+        }
+    }
+    return map.default;
+};
+
 // Order is summed from top to bottom in the style hierarchy:
 // each child order value is added to the parent order value
 StyleParser.calculateOrder = function(order, context) {

@@ -49,6 +49,9 @@ Object.assign(Sprites, {
         if (typeof style.sprite === 'function') {
             style.sprite = style.sprite(context);
         }
+        else if (typeof style.sprite === 'object') {
+            style.sprite = StyleParser.parsePropertyMap(style.sprite, context);
+        }
 
         // sprite style only supports sizes in pixel units, so unit conversion flag is off
         style.size = rule_style.size || [32, 32];
