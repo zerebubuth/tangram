@@ -568,7 +568,8 @@ layers:
                         - cafe
                         - sunburst: bank
                         - museum: [museum, library]
-                    default: tree
+                    # default: tree
+                require_sprite: true
                 # sprite: tree
                 # size: [32px, 32px]
                 size: [[13, 16px], [14, 24px], [15, 32px]]

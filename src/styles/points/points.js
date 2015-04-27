@@ -64,6 +64,11 @@ Object.assign(Points, {
             style.sprite = StyleParser.parsePropertyMap(style.sprite, context);
         }
 
+        // require sprite to draw?
+        if (rule_style.require_sprite && !style.sprite) {
+            return; // skip feature
+        }
+
         // point style only supports sizes in pixel units, so unit conversion flag is off
         style.size = rule_style.size || [32, 32];
         style.size = StyleParser.parseDistance(style.size, context, false);
@@ -98,6 +103,8 @@ Object.assign(Points, {
             if (!this.texcoord_scale) {
                 log.warn(`Style: in style '${this.name}', could not find sprite '${style.sprite}' for texture '${this.texture}'`);
             }
+        } else {
+            this.texcoord_scale = null;
         }
 
         return style;
