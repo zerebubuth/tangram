@@ -57,7 +57,7 @@ Style.color = {
     // pseudo-random grayscale by geometry id
     pseudoRandomGrayscale() {
         var func = `function() {
-            var c = Math.max((parseInt(feature.id, 16) % 100) / 100, 0.4);
+            var c = Math.max((parseInt(feature.osm_id, 16) % 100) / 100, 0.4);
             return [0.7 * c, 0.7 * c, 0.7 * c];
         }`;
         return func;
@@ -67,13 +67,13 @@ Style.color = {
     pseudoRandomColor() {
         var func = `function() {
             return [
-                0.7 * (parseInt(feature.id, 16) / 100 % 1),
-                0.7 * (parseInt(feature.id, 16) / 10000 % 1),
-                0.7 * (parseInt(feature.id, 16) / 1000000 % 1)
+                0.7 * (parseInt(feature.osm_id, 16) / 100 % 1),
+                0.7 * (parseInt(feature.osm_id, 16) / 10000 % 1),
+                0.7 * (parseInt(feature.osm_id, 16) / 1000000 % 1)
             ];
         }`;
         return func;
-        // return `function() { return [0.7 * (parseInt(feature.id, 16) / 100 % 1), 0.7 * (parseInt(feature.id, 16) / 10000 % 1), 0.7 * (parseInt(feature.id, 16) / 1000000 % 1)]; }`;
+        // return `function() { return [0.7 * (parseInt(feature.osm_id, 16) / 100 % 1), 0.7 * (parseInt(feature.osm_id, 16) / 10000 % 1), 0.7 * (parseInt(feature.osm_id, 16) / 1000000 % 1)]; }`;
     },
 
     // random color
@@ -89,25 +89,27 @@ Style.color = {
 // The provided pixel value ('p') can itself be a function, in which case it is wrapped by this one.
 Style.pixels = function (p) {
     var f;
-    /* jshint ignore:start */
-    // eval('f = function() { return ' + (typeof p === 'function' ? '(' + (p.toString() + '())') : p) + ' * meters_per_pixel; }');
-    /* jshint ignore:end */
-    f = 'function() { return ' + (typeof p === 'function' ? '(' + (p.toString() + '())') : p) + ' * meters_per_pixel; }';
+    f = 'function() { return ' + (typeof p === 'function' ? '(' + (p.toString() + '())') : p) + ' * $meters_per_pixel; }';
     return f;
 };
 
 // Wraps style functions and provides a scope of commonly accessible data:
 // - feature: the 'properties' of the feature, e.g. accessed as 'feature.name'
-// - zoom: the current map zoom level
-// - meters_per_pixel: conversion for meters/pixels at current map zoom
+// - $zoom: the current map zoom level
+// - $geometry: the type of geometry, 'point', 'line', or 'polygon'
+// - $meters_per_pixel: conversion for meters/pixels at current map zoom
 // - properties: user-defined properties on the style-rule object in the stylesheet
 StyleParser.wrapFunction = function (func) {
     var f = `function(context) {
                 var feature = context.feature.properties;
-                feature.id = context.feature.id;
-                var zoom = context.zoom;
-                var meters_per_pixel = context.meters_per_pixel;
+                var $zoom = context.zoom;
+                var $geometry = context.geometry;
+                var $meters_per_pixel = context.meters_per_pixel;
                 var properties = context.properties;
+
+                // TODO: remove once tile feature ids are normalized
+                feature.osm_id = feature.osm_id || feature.uid || context.feature.id;
+
                 return (${func}());
             }`;
     return f;
@@ -126,9 +128,6 @@ StyleParser.defaults = {
     min_height: 0,
     order: 0,
     z: 0,
-    style: {
-        name: 'polygons'
-    },
     material: {
         ambient: 1,
         diffuse: 1
@@ -142,6 +141,7 @@ StyleParser.getFeatureParseContext = function (feature, tile) {
         feature,
         tile,
         zoom: tile.coords.z,
+        geometry: Geo.geometryType(feature.geometry.type),
         meters_per_pixel: Geo.metersPerPixel(tile.coords.z),
         units_per_meter: Geo.units_per_meter[tile.coords.z]
     };
@@ -248,10 +248,14 @@ StyleParser.parseColor = function(val, context = {}) {
 // Example:
 //     input: kind
 //     values:
-//         library: museum
+//         - restaurant                 # implicit pass-through, restaurant -> restaurant
+//         - food: cafe                 # explicit 1:1, cafe -> food
+//         - museum: [museum, library]  # multiple keys to one value, [museum, library] -> museum
 //     default: tree
 StyleParser.parsePropertyMap = function (map, context) {
     let input;
+
+    // Input value can be a feature property, or a function
     if (typeof map.input === 'function') {
         input = map.input(context);
     }
@@ -259,9 +263,35 @@ StyleParser.parsePropertyMap = function (map, context) {
         input = context.feature.properties[map.input];
     }
 
-    for (let value in map.values) {
-        if (input === value) {
-            return map.values[value];
+    // Check to see if any of the value mappings apply
+    let value, key;
+    for (let v=0; v < map.values.length; v++) {
+        value = map.values[v];
+
+        // Single value, input value is passed through
+        // e.g. restaurant -> restaurant
+        if (typeof value !== 'object') {
+            if (input === value) {
+                return value;
+            }
+        }
+        else {
+            key = Object.keys(value)[0]; // use first key
+
+            // Single value, map specific input to one output
+            // e.g. cafe -> food
+            if (!Array.isArray(value[key])) {
+                if (input === value[key]) {
+                    return key;
+                }
+            }
+            // Multiple values, map a set of inputs into one output
+            // e.g. [museum, library] -> museum
+            else {
+                if (value[key].indexOf(input) > -1) {
+                    return key;
+                }
+            }
         }
     }
     return map.default;
@@ -279,6 +309,9 @@ StyleParser.calculateOrder = function(order, context) {
             if (typeof order === 'function') {
                 order = order(context);
             }
+            else if (typeof order === 'string') {
+                order = context.feature.properties[order];
+            }
             else {
                 order = parseFloat(order);
             }
@@ -288,6 +321,9 @@ StyleParser.calculateOrder = function(order, context) {
             }
             return sum + order;
         }, 0);
+    }
+    else if (typeof order === 'string') {
+        order = context.feature.properties[order];
     }
     else {
         order = parseFloat(order);

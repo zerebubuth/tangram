@@ -28,10 +28,6 @@ export default class Tile {
             error: null,
             worker: null,
             visible: false,
-            order: {
-                min: Infinity,
-                max: -Infinity
-            },
             center_dist: 0
         });
 
@@ -113,7 +109,6 @@ export default class Tile {
             coords: this.coords,
             min: this.min,
             max: this.max,
-            order: this.order,
             debug: this.debug
         };
     }
@@ -166,34 +161,46 @@ export default class Tile {
                     continue;
                 }
 
-                // Render features within each layer, in reverse order - aka top to bottom
+                // Render features in layer
                 let num_features = geom.features.length;
                 for (let f = num_features-1; f >= 0; f--) {
                     let feature = geom.features[f];
                     let context = StyleParser.getFeatureParseContext(feature, tile);
 
-                    // Find matching rules
+                    // Get draw groups for this feature
                     let layer_rules = rules[layer_name];
-                    let rule = layer_rules.findMatchingRules(context, true);
-
-                    // Parse & render styles
-                    if (!rule || !rule.visible) {
+                    let draw_groups = layer_rules.buildDrawGroups(context, true);
+                    if (!draw_groups) {
                         continue;
                     }
 
-                    // Add to style
-                    rule.name = rule.name || StyleParser.defaults.style.name;
-                    let style = styles[rule.name];
+                    // Render draw groups
+                    for (let group_name in draw_groups) {
+                        let group = draw_groups[group_name];
+                        if (!group.visible) {
+                            continue;
+                        }
 
-                    if (!tile_data[rule.name]) {
-                        tile_data[rule.name] = style.startData();
+                        // Add to style
+                        let style_name = group.style || group_name;
+                        let style = styles[style_name];
+
+                        if (!style) {
+                            log.warn(`Style '${style_name}' not found for rule in layer '${layer_name}':`, group);
+                            continue;
+                        }
+
+                        if (!tile_data[style_name]) {
+                            tile_data[style_name] = style.startData();
+                        }
+
+                        context.properties = group.properties; // add rule-specific properties to context
+
+                        style.addFeature(feature, group, context, tile_data[style_name]);
+
+                        context.properties = null; // clear group-specific properties
                     }
 
-                    context.properties = rule.properties; // add rule-specific properties to context
-
-                    style.addFeature(feature, rule, context, tile_data[rule.name]);
-
-                    context.properties = null; // clear rule-specific properties
                     source.debug.features++;
                 }
 
@@ -214,14 +221,6 @@ export default class Tile {
                         uniforms: style_data.uniforms,
                         textures: style_data.textures
                     };
-
-                    // Track min/max order range
-                    if (style_data.order.min < tile.order.min) {
-                        tile.order.min = style_data.order.min;
-                    }
-                    if (style_data.order.max > tile.order.max) {
-                        tile.order.max = style_data.order.max;
-                    }
                 }
             }));
         }
@@ -284,12 +283,18 @@ export default class Tile {
         // Cleanup existing VBOs
         this.freeResources();
 
+        // Debug
+        this.debug.geometries = 0;
+        this.debug.buffer_size = 0;
+
         // Create VBOs
         let mesh_data = this.mesh_data;
         if (mesh_data) {
             for (var s in mesh_data) {
                 if (mesh_data[s].vertex_data) {
+                    this.debug.buffer_size += mesh_data[s].vertex_data.byteLength;
                     this.meshes[s] = styles[s].makeMesh(mesh_data[s].vertex_data, mesh_data[s]);
+                    this.debug.geometries += this.meshes[s].geometry_count;
                 }
 
                 // Assign ownership to textures if needed
@@ -299,14 +304,7 @@ export default class Tile {
             }
         }
 
-        this.debug.geometries = 0;
-        this.debug.buffer_size = 0;
-        for (var p in this.meshes) {
-            this.debug.geometries += this.meshes[p].geometry_count;
-            this.debug.buffer_size += this.meshes[p].vertex_data.byteLength;
-        }
         this.debug.geom_ratio = (this.debug.geometries / this.debug.features).toFixed(1);
-
         this.mesh_data = null; // TODO: might want to preserve this for rebuilding geometries when styles/etc. change?
     }
 

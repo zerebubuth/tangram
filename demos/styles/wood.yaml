@@ -1,5 +1,5 @@
 wood:
-    extends: polygons
+    base: polygons
     shaders:
         uniforms:
             u_wood_color1: [.9, .5, .5]
@@ -9,7 +9,7 @@ wood:
             u_wood_scale: 50
             u_wood_spacing: 1
         blocks:
-            globals: |
+            global: |
 
                 vec3 wood( vec3 pos ) {
 

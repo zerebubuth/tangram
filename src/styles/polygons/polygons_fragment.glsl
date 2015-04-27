@@ -1,24 +1,23 @@
 uniform vec2 u_resolution;
-uniform vec2 u_aspect;
 uniform float u_meters_per_pixel;
+uniform float u_device_pixel_ratio;
 uniform float u_time;
-uniform float u_map_zoom;
-uniform vec2 u_map_center;
-uniform vec2 u_tile_origin;
+uniform vec3 u_map_position;
+uniform vec3 u_tile_origin;
 
 varying vec4 v_position;
 varying vec3 v_normal;
 varying vec4 v_color;
 varying vec4 v_world_position;
 
-#if defined(TEXTURE_COORDS)
+#ifdef TANGRAM_TEXTURE_COORDS
     varying vec2 v_texcoord;
 #endif
 
 // Define a wrap value for world coordinates (allows more precision at higher zooms)
 // e.g. at wrap 1000, the world space will wrap every 1000 meters
-#if defined(WORLD_POSITION_WRAP)
-    vec2 world_position_anchor = vec2(floor(u_tile_origin / WORLD_POSITION_WRAP) * WORLD_POSITION_WRAP);
+#if defined(TANGRAM_WORLD_POSITION_WRAP)
+    vec2 world_position_anchor = vec2(floor(u_tile_origin / TANGRAM_WORLD_POSITION_WRAP) * TANGRAM_WORLD_POSITION_WRAP);
 
     // Convert back to absolute world position if needed
     vec4 absoluteWorldPosition () {
@@ -34,10 +33,10 @@ varying vec4 v_world_position;
     varying vec4 v_lighting;
 #endif
 
-#pragma tangram: globals
 #pragma tangram: camera
 #pragma tangram: material
 #pragma tangram: lighting
+#pragma tangram: global
 
 void main (void) {
     vec4 color = v_color;
@@ -63,9 +62,6 @@ void main (void) {
 
     // Modify color after lighting (filter-like effects that don't require a additional render passes)
     #pragma tangram: filter
-
-    // TODO: legacy, replace in existing styles
-    // #pragma tangram: fragment
 
     gl_FragColor = color;
 }

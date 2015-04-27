@@ -79,14 +79,14 @@ export default class Light {
                 lights[light_name].inject();
 
                 // Add the calculation function to the list
-                calculateLights += `calculateLight(g_${light_name}, _eyeToPoint, _normal);\n`;
+                calculateLights += `calculateLight(${light_name}, _eyeToPoint, _normal);\n`;
             }
         }
         else {
             // If no light is defined, use 100% omnidirectional diffuse light
             calculateLights = `
                 #ifdef TANGRAM_MATERIAL_DIFFUSE
-                    g_light_accumulator_diffuse = vec4(1.);
+                    light_accumulator_diffuse = vec4(1.);
                 #endif
             `;
         }
@@ -105,23 +105,23 @@ export default class Light {
                 vec4 color = vec4(0.0);
 
                 #ifdef TANGRAM_MATERIAL_EMISSION
-                    color = g_material.emission;
+                    color = material.emission;
                 #endif
 
                 #ifdef TANGRAM_MATERIAL_AMBIENT
-                    color += g_light_accumulator_ambient * _color * g_material.ambient;
+                    color += light_accumulator_ambient * _color * material.ambient;
                 #else
                     #ifdef TANGRAM_MATERIAL_DIFFUSE
-                        color += g_light_accumulator_ambient * _color * g_material.diffuse;
+                        color += light_accumulator_ambient * _color * material.diffuse;
                     #endif
                 #endif
 
                 #ifdef TANGRAM_MATERIAL_DIFFUSE
-                    color += g_light_accumulator_diffuse * _color * g_material.diffuse;
+                    color += light_accumulator_diffuse * _color * material.diffuse;
                 #endif
 
                 #ifdef TANGRAM_MATERIAL_SPECULAR
-                    color += g_light_accumulator_specular * g_material.specular;
+                    color += light_accumulator_specular * material.specular;
                 #endif
 
                 // Clamp final color
@@ -137,7 +137,7 @@ export default class Light {
     inject () {
         let instance =  `
             uniform ${this.struct_name} u_${this.name};
-            ${this.struct_name} g_${this.name} = u_${this.name};\n`;
+            ${this.struct_name} ${this.name} = u_${this.name};\n`;
 
         ShaderProgram.addBlock(Light.block, instance);
     }
