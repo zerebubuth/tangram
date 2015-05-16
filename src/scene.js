@@ -563,6 +563,11 @@ export default class Scene {
         }
         this.dirty = false; // subclasses can set this back to true when animation is needed
 
+        // Config-file defined per-frame update function
+        if (typeof this.config.scene.update === 'function') {
+            this.config.scene.update.call(null, { scene: this });
+        }
+
         // Render the scene
         this.render();
 
@@ -1248,8 +1253,10 @@ export default class Scene {
         }
 
         // Use explicitly set scene animation flag if defined, otherwise turn on animation
-        // if there are any animated styles
-        this.animated = this.config.scene.animated !== undefined ? this.config.scene.animated : animated;
+        // if there is a scene update function, or any animated styles are active
+        this.animated = this.config.scene.animated !== undefined ?
+            this.config.scene.animated :
+            (typeof this.config.scene.update === 'function' || animated);
 
         // Compile newly active styles
         return Object.keys(this.active_styles).filter(s => prev_styles.indexOf(s) === -1);
@@ -1323,6 +1330,25 @@ export default class Scene {
         }
     }
 
+    // Set an optional per-frame update function from scene file
+    setUpdateFunction() {
+        if (!this.config.scene.update) {
+            return;
+        }
+        this.config.scene.update = Utils.stringToFunction(this.config.scene.update, wrap);
+
+        // Wrap the function to provide scene-specific context
+        function wrap (func) {
+            return `function(context) {
+                        var camera = context.scene.camera;
+                        var lights = context.scene.lights;
+                        var styles = context.scene.styles;
+                        var properties = context.scene.config.scene.properties;
+                        return (${func}());
+                    }`;
+        }
+    }
+
     // Update scene config, and optionally rebuild geometry
     updateConfig({ rebuild } = {}) {
         this.generation++;
@@ -1334,6 +1360,7 @@ export default class Scene {
         this.setSourceMax();
         this.loadTextures();
         this.setBackground();
+        this.setUpdateFunction();
 
         // TODO: detect changes to styles? already (currently) need to recompile anyway when camera or lights change
         this.updateStyles();

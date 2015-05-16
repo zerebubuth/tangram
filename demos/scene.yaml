@@ -24,6 +24,11 @@ lights:
 scene:
     background:
         color: '#9dc3de'
+    # update: |
+    #     function() {
+    #         camera.vanishing_point[0] = Math.sin(+new Date() / 750) * 500;
+    #         camera.focal_length = Math.abs(Math.sin(+new Date() / 1200)) * 3 + 0.5;
+    #     }
 
 textures:
     pois:
