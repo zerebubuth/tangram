@@ -49,9 +49,7 @@ if (Utils.isMainThread) {
                     highDensityDisplay: this.options.highDensityDisplay,
                     logLevel: this.options.logLevel,
                     // advanced option, app will have to manually called scene.update() per frame
-                    disableRenderLoop: this.options.disableRenderLoop,
-                    // advanced option, will require library to be served as same host as page
-                    allowCrossDomainWorkers: this.options.allowCrossDomainWorkers
+                    disableRenderLoop: this.options.disableRenderLoop
                 });
         },
 

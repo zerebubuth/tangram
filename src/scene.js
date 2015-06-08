@@ -47,7 +47,6 @@ export default class Scene {
         this.num_workers = options.numWorkers || 2;
         this.continuous_zoom = (typeof options.continuousZoom === 'boolean') ? options.continuousZoom : true;
         this.tile_simplification_level = 0; // level-of-detail downsampling to apply to tile loading
-        this.allow_cross_domain_workers = (options.allowCrossDomainWorkers === false ? false : true);
         this.worker_url = options.workerUrl;
         if (options.disableVertexArrayObjects === true) {
             VertexArrayObject.disabled = true;
@@ -251,49 +250,50 @@ export default class Scene {
             throw new Error("Can't load worker because couldn't find base URL that library was loaded from");
         }
 
-        if (this.allow_cross_domain_workers) {
-            let body = `importScripts('${worker_url}');`;
-            return Utils.createObjectURL(new Blob([body], { type: 'application/javascript' }));
-        }
-        return worker_url;
+        // Import custom data source scripts alongside core library
+        // NOTE: workaround for Chrome issue where large libraries would fail to load (generic 'script error' or
+        // call stack exceeded) via an additional importScripts() call from within the worker; loading them all
+        // at worker creation time has not exhibited the same issue
+        let source_scripts = Object.keys(this.config.sources).map(s => this.config.sources[s].scripts).filter(x => x);
+        log.debug('loading custom data source scripts in worker:', ...[].concat(...source_scripts));
+
+        let urls = [worker_url].concat(...source_scripts);
+        let body = `importScripts(${urls.map(url => `'${url}'`).join(',')});`;
+        return Utils.createObjectURL(new Blob([body], { type: 'application/javascript' }));
     }
 
     // Web workers handle heavy duty tile construction: networking, geometry processing, etc.
     createWorkers() {
         if (!this.workers) {
-            return this.makeWorkers(this.getWorkerUrl());
+            let url = this.getWorkerUrl();
+            let queue = [];
+
+            this.workers = [];
+            for (let id=0; id < this.num_workers; id++) {
+                let worker = new Worker(url);
+                this.workers[id] = worker;
+
+                worker.addEventListener('message', this.workerLogMessage.bind(this));
+                WorkerBroker.addWorker(worker);
+
+                log.debug(`Scene.makeWorkers: initializing worker ${id}`);
+                let _id = id;
+                queue.push(WorkerBroker.postMessage(worker, 'init', id, this.num_workers, Utils.device_pixel_ratio).then(
+                    (id) => {
+                        log.debug(`Scene.makeWorkers: initialized worker ${id}`);
+                        return id;
+                    },
+                    (error) => {
+                        log.error(`Scene.makeWorkers: failed to initialize worker ${_id}:`, error);
+                        return Promise.reject(error);
+                    })
+                );
+            }
+
+            this.next_worker = 0;
+            return Promise.all(queue);
         }
         return Promise.resolve();
-    }
-
-    // Instantiate workers from URL, init event handlers
-    makeWorkers(url) {
-        var queue = [];
-
-        this.workers = [];
-        for (var id=0; id < this.num_workers; id++) {
-            var worker = new Worker(url);
-            this.workers[id] = worker;
-
-            worker.addEventListener('message', this.workerLogMessage.bind(this));
-            WorkerBroker.addWorker(worker);
-
-            log.debug(`Scene.makeWorkers: initializing worker ${id}`);
-            let _id = id;
-            queue.push(WorkerBroker.postMessage(worker, 'init', id, this.num_workers, Utils.device_pixel_ratio).then(
-                (id) => {
-                    log.debug(`Scene.makeWorkers: initialized worker ${id}`);
-                    return id;
-                },
-                (error) => {
-                    log.error(`Scene.makeWorkers: failed to initialize worker ${_id}:`, error);
-                    return Promise.reject(error);
-                })
-            );
-        }
-
-        this.next_worker = 0;
-        return Promise.all(queue);
     }
 
     // Round robin selection of next worker
@@ -933,6 +933,7 @@ export default class Scene {
     preProcessConfig() {
         // Assign ids to data sources
         let source_id = 0;
+        this.config.sources = this.config.sources || {};
         for (let source in this.config.sources) {
             this.config.sources[source].id = source_id++;
         }
