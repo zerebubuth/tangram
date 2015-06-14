@@ -50,26 +50,6 @@ Utils.isWorkerThread && Object.assign(self, {
             config.layers[layer].data = Utils.stringsToFunctions(config.layers[layer].data);
         }
 
-        // Create data sources
-        config.sources = Utils.stringsToFunctions(StyleParser.expandMacros(config.sources));
-        for (var name in config.sources) {
-            let source = DataSource.create(Object.assign(config.sources[name], {name}));
-            if (source.tiled) {
-                self.sources.tiles[name] = source;
-            }
-            else {
-                // Distribute object sources across workers
-                if (source.id % self.num_workers === self._worker_id) {
-                    // Load source if not cached
-                    self.sources.objects[name] = source;
-                    if (!self.objects[source.name]) {
-                        self.objects[source.name] = {};
-                        source.load(self.objects[source.name]);
-                    }
-                }
-            }
-        }
-
         // Expand styles
         self.config = Utils.stringsToFunctions(StyleParser.expandMacros(config), StyleParser.wrapFunction);
         self.styles = StyleManager.build(self.config.styles, { generation: self.generation });
@@ -86,6 +66,25 @@ Utils.isWorkerThread && Object.assign(self, {
         self.configuring = self.syncing_textures.then(() => {
             Utils.log('debug', `updated config`);
         });
+
+        // Create data sources
+        config.sources = Utils.stringsToFunctions(StyleParser.expandMacros(config.sources));
+        for (var name in config.sources) {
+            let source = DataSource.create(Object.assign(config.sources[name], {name}));
+            if (source.tiled) {
+                self.sources.tiles[name] = source;
+            }
+            else {
+                // Distribute object sources across workers
+                if (source.id % self.num_workers === self._worker_id) {
+                    // Load source if not cached
+                    self.sources.objects[name] = source;
+                    if (!self.objects[source.name]) {
+                        self.buildObject({ source });
+                    }
+                }
+            }
+        }
     },
 
     // Returns a promise that fulfills when config refresh is finished
@@ -110,32 +109,28 @@ Utils.isWorkerThread && Object.assign(self, {
         return self.awaitConfiguration().then(() => {
             // First time building the tile
             if (tile.loaded !== true) {
+                tile.loading = true;
+                tile.loaded = false;
+                tile.error = null;
 
-                return new Promise((resolve, reject) => {
+                return self.loadTileSourceData(tile).then(() => {
+                    // Warn and continue on data source error
+                    if (tile.source_data.error) {
+                        Utils.log('warn', `tile load error(s) for ${tile.key}: ${tile.source_data.error}`);
+                    }
 
-                    tile.loading = true;
-                    tile.loaded = false;
-                    tile.error = null;
+                    tile.loading = false;
+                    tile.loaded = true;
 
-                    self.loadTileSourceData(tile).then(() => {
-                        // Warn and continue on data source error
-                        if (tile.source_data.error) {
-                            Utils.log('warn', `tile load error(s) for ${tile.key}: ${tile.source_data.error}`);
-                        }
-
-                        tile.loading = false;
-                        tile.loaded = true;
-                        Tile.buildGeometry(tile, self.config.layers, self.rules, self.styles).then(keys => {
-                            resolve({ tile: Tile.slice(tile, keys) });
-                        });
-                    }).catch((error) => {
-                        tile.loading = false;
-                        tile.loaded = false;
-                        tile.error = error.toString();
-                        Utils.log('error', `tile load error for ${tile.key}: ${error.stack}`);
-
-                        resolve({ tile: Tile.slice(tile) });
+                    return Tile.buildGeometry(tile, self.config.layers, self.rules, self.styles).then(keys => {
+                        return { tile: Tile.slice(tile, keys) };
                     });
+                }).catch((error) => {
+                    tile.loading = false;
+                    tile.loaded = false;
+                    tile.error = error.toString();
+                    Utils.log('error', `tile load error for ${tile.key}: ${error.stack}`);
+                    return { tile: Tile.slice(tile) };
                 });
             }
             // Tile already loaded, just rebuild
@@ -147,6 +142,39 @@ Utils.isWorkerThread && Object.assign(self, {
                     return { tile: Tile.slice(tile, keys) };
                 });
             }
+        });
+    },
+
+    buildObject ({ source }) {
+        // Update config (styles, etc.), then build
+        return self.awaitConfiguration().then(() => {
+
+            let object = self.objects[source.name] = {}; // TODO: RenderObject class?
+            object.key = source.name;
+            object.source = source.name;
+            object.generation = self.generation;
+            object.style_zoom = 16; // TEMP
+            object.coords = { z: 16 }; // TEMP
+
+            source.load(object).then(() => {
+                // Warn and continue on data source error
+                if (object.source_data.error) {
+                    Utils.log('warn', `object load error(s) for ${object.key}: ${object.source_data.error}`);
+                }
+
+                object.loading = false;
+                object.loaded = true;
+                Tile.buildGeometry(object, self.config.layers, self.rules, self.styles).then(keys => {
+                    // resolve({ object: Tile.slice(object, keys) });
+                });
+            }).catch((error) => {
+                object.loading = false;
+                object.loaded = false;
+                object.error = error.toString();
+                Utils.log('error', `object load error for ${object.key}: ${error.stack}`);
+
+                // resolve({ object: Tile.slice(object, keys) });
+            });
         });
     },
 

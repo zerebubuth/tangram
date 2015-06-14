@@ -135,11 +135,23 @@ styles:
 
 sources:
     # When commented, demo main.js will set source based on URL - uncomment for testing
-    # osm:
-    #     type: TopoJSONTiles
-    #     url:  http://vector.mapzen.com/osm/all/{z}/{x}/{y}.topojson?api_key=vector-tiles-HqUVidw
+    osm:
+        type: TopoJSONTiles
+        url:  http://vector.mapzen.com/osm/all/{z}/{x}/{y}.topojson?api_key=vector-tiles-HqUVidw
+    schools:
+        type: GeoJSON
+        url:  demos/data/school-districts-polygon.geojson
 
 layers:
+
+    schools:
+        data: { source: schools }
+        draw:
+            lines:
+                order: 10
+                color: red
+                width: 3px
+
     earth:
         data: { source: osm }
         draw:
