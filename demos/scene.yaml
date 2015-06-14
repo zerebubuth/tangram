@@ -18,8 +18,8 @@ lights:
     directional1:
         type: directional
         direction: [.1, .5, -1] #[0.1, 0.1, -1]
-        diffuse: .2
-        ambient: 1.1
+        diffuse: .5
+        ambient: .3
 
 scene:
     background:
@@ -125,13 +125,29 @@ styles:
     buildings:
         base: polygons
         shaders:
+            # extensions: [EXT_frag_depth]
             blocks:
                 color: |
                     color.rgb = vec3(min((v_world_position.z*.0005 + .65),.8));
+                    //gl_FragDepthEXT = fract(v_world_position.x);
 
     icons:
         base: points
         texture: pois
+
+    screendoor:
+        base: polygons
+        shaders:
+            defines:
+                GRID_SIZE: 1
+            blocks:
+                global: |
+                    #define GRID_SIZE_2 (GRID_SIZE * 2.)
+                color: |
+                    if ((mod(gl_FragCoord.x, GRID_SIZE_2) < GRID_SIZE && mod(gl_FragCoord.y, GRID_SIZE_2) > GRID_SIZE) ||
+                        (mod(gl_FragCoord.x, GRID_SIZE_2) > GRID_SIZE && mod(gl_FragCoord.y, GRID_SIZE_2) < GRID_SIZE)) {
+                        discard;
+                    }
 
 sources:
     # When commented, demo main.js will set source based on URL - uncomment for testing
@@ -288,8 +304,10 @@ layers:
 
         draw:
             polygons:
+                # style: screendoor
+                # style: buildings
                 order: 50
-                color: [.65, .65, .65]
+                color: [.8, .8, .8] #[.65, .65, .65]
 
         # turn interactive feature selection on for buildings with names
         interactive:
@@ -301,8 +319,15 @@ layers:
             filter: { $zoom: { min: 15 } }
             draw:
                 polygons:
-                    style: buildings
+                    # style: buildings
                     extrude: function () { return feature.height > 20 || $zoom >= 16; }
+
+        screendoor:
+            filter: { height: { min: 50 } }
+            draw:
+                polygons:
+                    style: screendoor
+                    color: red
 
         high-line:
             filter: { roof_material: grass }
