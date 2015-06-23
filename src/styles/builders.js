@@ -150,6 +150,22 @@ Builders.buildExtrudedPolygons = function (
     }
 };
 
+function equalVertex(A, B){
+    return ( (A[0] === B[0]) && (A[1] === B[1]) );
+}
+
+function getSavePrev(array, currentIndex, prevIndex){
+    while (true){
+        prevIndex--;
+        if (prevIndex < 0){
+            prevIndex = array.length-1;
+        }
+        if (!equalVertex(array[currentIndex],array[prevIndex]) ){
+            return array[prevIndex];
+        }
+    }
+}
+
 // Build tessellated triangles for a polyline
 Builders.buildPolylines = function (
     lines,
@@ -206,8 +222,9 @@ Builders.buildPolylines = function (
         var isPrev = false,
             isNext = true;
 
+
         // Add vertices to buffer acording their index
-        indexPairs(constants);
+        // indexPairs(constants);
 
         // Do this with the rest (except the last one)
         for (let i = 0; i < lineSize ; i++) {
@@ -215,104 +232,112 @@ Builders.buildPolylines = function (
             // There is a next one?
             isNext = i+1 < lineSize;
 
-            if (isPrev) {
-                // If there is a previus one, copy the current (previous) values on *Prev
-                coordPrev = coordCurr;
-                normPrev = Vector.normalize(Vector.perp(coordPrev, line[i]));
-            } else if (i === 0 && closed_polygon === true) {
-                // If is the first point and is a close polygon
+            if (isNext && equalVertex(line[i],line[i+1]) ){
+                // Degenerated polygon
 
-                var needToClose = true;
-                if (remove_tile_edges) {
-                    if(Builders.isOnTileEdge(line[i], line[lineSize-2], { tile_edge_tolerance })) {
-                        needToClose = false;
+            } else {
+                if (isPrev) {
+                    // If there is a previus one, copy the current (previous) values on *Prev
+                    coordPrev = coordCurr;
+                    normPrev = Vector.normalize(Vector.perp(coordPrev, line[i]));
+                } else if (i === 0 && closed_polygon === true) {
+                    // If is the first point and is a close polygon
+
+                    var needToClose = true;
+                    if (remove_tile_edges) {
+                        if(Builders.isOnTileEdge(line[i], line[lineSize-2], { tile_edge_tolerance })) {
+                            needToClose = false;
+                        }
+                    }
+
+                    if (needToClose) {
+                        // coordPrev = line[lineSize-2];
+                        coordPrev = getSavePrev(line,i,lineSize-1);
+                        normPrev = Vector.normalize(Vector.perp(coordPrev, line[i]));
+                        isPrev = true;
                     }
                 }
 
-                if (needToClose) {
-                    coordPrev = line[lineSize-2];
-                    normPrev = Vector.normalize(Vector.perp(coordPrev, line[i]));
+                // Assign current coordinate
+                coordCurr = line[i];
+
+                if (isNext) {
+                    coordNext = line[i+1];
+                } else if (closed_polygon === true) {
+                    // If is the last point a close polygon
+                    coordNext = line[1];
+                    isNext = true;
+                }
+
+                if (isNext) {
+                    // If is not the last one get next coordinates and calculate the right normal
+
+                    normNext = Vector.normalize(Vector.perp(coordCurr, coordNext));
+                    if (remove_tile_edges) {
+                        if (Builders.isOnTileEdge(coordCurr, coordNext, { tile_edge_tolerance })) {
+                            normCurr = Vector.normalize(Vector.perp(coordPrev, coordCurr));
+                            if (isPrev) {
+                                addVertexPair(coordCurr, normCurr, i/lineSize, constants);
+                                constants.nPairs++;
+
+                                // Add vertices to buffer acording their index
+                                indexPairs(constants);
+                            }
+                            isPrev = false;
+                            continue;
+                        }
+                    }
+                }
+
+                //  Compute current normal
+                if (isPrev) {
+                    //  If there is a PREVIUS ...
+                    if (isNext) {
+                        // ... and a NEXT ONE, compute previus and next normals (scaled by the angle with the last prev)
+                        normCurr = Vector.normalize(Vector.add(normPrev, normNext));
+                        var scale = 2 / (1 + Math.abs(Vector.dot(normPrev, normCurr)));
+                        normCurr = Vector.mult(normCurr,scale*scale);
+                    } else {
+                        // ... and there is NOT a NEXT ONE, copy the previus next one (which is the current one)
+                        normCurr = Vector.normalize(Vector.perp(coordPrev, coordCurr));
+                    }
+                } else {
+                    // If is NOT a PREVIUS ...
+                    if (isNext) {
+                        // ... and a NEXT ONE,
+                        normNext = Vector.normalize(Vector.perp(coordCurr, coordNext));
+                        normCurr = normNext;
+                    } else {
+                        // ... and NOT a NEXT ONE, nothing to do (without prev or next one this is just a point)
+                        continue;
+                    }
+                }
+
+                if (isPrev || isNext) {
+                    // If is the BEGINING of a LINE
+                    if (i === 0 && !isPrev && !closed_polygon) {
+                        addCap(coordCurr, normCurr, cornersOnCap, true, constants);
+                    }
+
+                    // If is a JOIN
+                    if(trianglesOnJoin !== 0 && isPrev && isNext) {
+                        addJoin([coordPrev, coordCurr, coordNext],
+                                [normPrev,normCurr, normNext],
+                                i/lineSize, trianglesOnJoin,
+                                constants);
+                    } else {
+                        addVertexPair(coordCurr, normCurr, i/(lineSize-1), constants);
+                    }
+
+                    if (isNext) {
+                       constants.nPairs++;
+                    }
+
                     isPrev = true;
                 }
             }
 
-            // Assign current coordinate
-            coordCurr = line[i];
-
-            if (isNext) {
-                coordNext = line[i+1];
-            } else if (closed_polygon === true) {
-                // If is the last point a close polygon
-                coordNext = line[1];
-                isNext = true;
-            }
-
-            if (isNext) {
-                // If is not the last one get next coordinates and calculate the right normal
-
-                normNext = Vector.normalize(Vector.perp(coordCurr, coordNext));
-                if (remove_tile_edges) {
-                    if (Builders.isOnTileEdge(coordCurr, coordNext, { tile_edge_tolerance })) {
-                        normCurr = Vector.normalize(Vector.perp(coordPrev, coordCurr));
-                        if (isPrev) {
-                            addVertexPair(coordCurr, normCurr, i/lineSize, constants);
-                            constants.nPairs++;
-
-                            // Add vertices to buffer acording their index
-                            indexPairs(constants);
-                        }
-                        isPrev = false;
-                        continue;
-                    }
-                }
-            }
-
-            //  Compute current normal
-            if (isPrev) {
-                //  If there is a PREVIUS ...
-                if (isNext) {
-                    // ... and a NEXT ONE, compute previus and next normals (scaled by the angle with the last prev)
-                    normCurr = Vector.normalize(Vector.add(normPrev, normNext));
-                    var scale = 2 / (1 + Math.abs(Vector.dot(normPrev, normCurr)));
-                    normCurr = Vector.mult(normCurr,scale*scale);
-                } else {
-                    // ... and there is NOT a NEXT ONE, copy the previus next one (which is the current one)
-                    normCurr = Vector.normalize(Vector.perp(coordPrev, coordCurr));
-                }
-            } else {
-                // If is NOT a PREVIUS ...
-                if (isNext) {
-                    // ... and a NEXT ONE,
-                    normNext = Vector.normalize(Vector.perp(coordCurr, coordNext));
-                    normCurr = normNext;
-                } else {
-                    // ... and NOT a NEXT ONE, nothing to do (without prev or next one this is just a point)
-                    continue;
-                }
-            }
-
-            if (isPrev || isNext) {
-                // If is the BEGINING of a LINE
-                if (i === 0 && !isPrev && !closed_polygon) {
-                    addCap(coordCurr, normCurr, cornersOnCap, true, constants);
-                }
-
-                // If is a JOIN
-                if(trianglesOnJoin !== 0 && isPrev && isNext) {
-                    addJoin([coordPrev, coordCurr, coordNext],
-                            [normPrev,normCurr, normNext],
-                            i/lineSize, trianglesOnJoin,
-                            constants);
-                } else {
-                    addVertexPair(coordCurr, normCurr, i/(lineSize-1), constants);
-                }
-
-                if (isNext) {
-                   constants.nPairs++;
-                }
-
-                isPrev = true;
-            }
+            
         }
 
         // Add vertices to buffer acording their index
