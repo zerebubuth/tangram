@@ -153,6 +153,10 @@ export default TileManager = {
 
         // Determine necessary tiles for each source
         for (let source of Utils.values(this.scene.sources)) {
+            if (!source.tiled) {
+                continue;
+            }
+
             let key = Tile.key(coords, source, this.scene.tile_zoom);
             if (!this.hasTile(key)) {
                 let tile = Tile.create({
@@ -238,6 +242,22 @@ export default TileManager = {
             this.building_tiles = null;
             this.scene.tileManagerBuildDone();
         }
+    },
+
+    // Sum of a debug property across tiles
+    getDebugSum(prop, filter) {
+        var sum = 0;
+        for (var t in this.tiles) {
+            if (this.tiles[t].debug[prop] != null && (typeof filter !== 'function' || filter(this.tiles[t]) === true)) {
+                sum += this.tiles[t].debug[prop];
+            }
+        }
+        return sum;
+    },
+
+    // Average of a debug property across tiles
+    getDebugAverage(prop, filter) {
+        return this.getDebugSum(prop, filter) / Object.keys(this.tiles).length;
     }
 
 };

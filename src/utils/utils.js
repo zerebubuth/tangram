@@ -31,10 +31,24 @@ Utils.addBaseURL = function (url, base) {
         else {
             base_info = window.location;
         }
-        if (!base_info.origin) {
-            base_info.origin = base_info.protocol + "//" + base_info.hostname + (base_info.port ? ':' + base_info.port: '') + '/';
+
+        if (relative) {
+            let path = base_info.href.match(/([^\#]+)/); // strip hash
+            path = (path && path.length > 1) ? path[0] : '';
+            url = path + url;
         }
-        url = base_info.origin + (relative ? base_info.pathname : '') + url;
+        else {
+            // Easy way
+            if (base_info.origin) {
+                url = base_info.origin + '/' + url;
+            }
+            // Hard way (IE11)
+            else {
+                var origin = url.match(/^((http|https|data|blob):\/\/[^\/]*\/)/);
+                origin = (origin && origin.length > 1) ? origin[0] : '';
+                url = origin + url;
+            }
+        }
     }
     return url;
 };
@@ -389,8 +403,11 @@ Utils.recurseValues = function* (obj) {
     }
 };
 
-Utils.scaleInt16 = function (val, max) {
-    return (val / max) * 32768;
+// Scale a *signed* short for use in a GL VBO
+// `unit` is an optional scaling factor to mimic fixed point, since these values will be
+// normalized to 0-1, e.g. divide input by unit on the way in, multiply it back in the shader
+Utils.scaleInt16 = function (val, unit) {
+    return (val / unit) * 32767;
 };
 
 Utils.degToRad = function (degrees) {
