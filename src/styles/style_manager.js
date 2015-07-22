@@ -203,6 +203,7 @@ StyleManager.mix = function (style, styles) {
     // Overwrites - last definition wins
     style.base = sources.map(x => x.base).filter(x => x).pop();
     style.texture = sources.map(x => x.texture).filter(x => x).pop();
+    style.blend_order = sources.map(x => x.blend_order).filter(x => x).pop();
 
     // Merges - property-specific rules for merging values
     style.defines = Object.assign({}, ...sources.map(x => x.defines).filter(x => x));

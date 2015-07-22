@@ -663,12 +663,16 @@ export default class Scene {
         count += this.renderStyles(styles, program_key);
 
         // Inlay styles: depth test on, depth write off, blending on
-        styles = Object.keys(this.styles).filter(s => this.styles[s].blend === 'inlay');
+        styles = Object.keys(this.styles).
+            filter(s => this.styles[s].blend === 'inlay').
+            sort((a, b) => this.styles[a].blend_order > this.styles[b].blend_order);
         this.setRenderState({ depth_test: true, depth_write: false, alpha_blend: allow_alpha_blend });
         count += this.renderStyles(styles, program_key);
 
         // Overlay styles: depth test off, depth write off, blending on
-        styles = Object.keys(this.styles).filter(s => this.styles[s].blend === 'overlay');
+        styles = Object.keys(this.styles).
+            filter(s => this.styles[s].blend === 'overlay').
+            sort((a, b) => this.styles[a].blend_order > this.styles[b].blend_order);
         this.setRenderState({ depth_test: false, depth_write: false, alpha_blend: allow_alpha_blend });
         count += this.renderStyles(styles, program_key);
 

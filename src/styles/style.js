@@ -37,6 +37,7 @@ export var Style = {
 
         // Blending
         this.blend = this.blend || 'opaque';        // default: opaque styles are drawn first, without blending
+        this.blend_order = this.blend_order || 0;   // order in which blended styles are sub-sorted
         this.defines[`TANGRAM_BLEND_${this.blend.toUpperCase()}`] = true;
 
         // If the style defines its own material, replace the inherited material instance
