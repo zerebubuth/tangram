@@ -69,11 +69,26 @@ Object.assign(Points, {
         }
 
         // if point has texture and sprites, require a valid sprite to draw
-        if (this.texture && Texture.textures[this.texture] && Texture.textures[this.texture].sprites) {
+        let texture = Texture.textures[this.texture];
+        if (texture && texture.sprites) {
             if (!style.sprite) {
                 return;
             }
-            else if (!Texture.textures[this.texture].sprites[style.sprite]) {
+            else if (Array.isArray(style.sprite)) {
+                let match = false;
+                for (let s=0; s < style.sprite.length; s++) {
+                    if (texture.sprites[style.sprite[s]]) {
+                        style.sprite = style.sprite[s];
+                        match = true;
+                        break;
+                    }
+                }
+                if (!match) {
+                    log.warn(`Style: in style '${this.name}', could not find any of sprites '${style.sprite.join(', ')}' for texture '${this.texture}'`);
+                    return;
+                }
+            }
+            else if (!texture.sprites[style.sprite]) {
                 log.warn(`Style: in style '${this.name}', could not find sprite '${style.sprite}' for texture '${this.texture}'`);
                 return;
             }
