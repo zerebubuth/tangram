@@ -150,7 +150,7 @@ export default class Tile {
 
     // Process geometry for tile - called by web worker
     // Returns a set of tile keys that should be sent to the main thread (so that we can minimize data exchange between worker and main thread)
-    static buildGeometry (tile, layers, rules, styles) {
+    static buildGeometry (tile, layers, rules, styles, scene) {
         tile.debug.rendering = +new Date();
         tile.debug.features = 0;
 
@@ -179,7 +179,7 @@ export default class Tile {
             let num_features = geom.features.length;
             for (let f = num_features-1; f >= 0; f--) {
                 let feature = geom.features[f];
-                let context = StyleParser.getFeatureParseContext(feature, tile);
+                let context = StyleParser.getFeatureParseContext(feature, tile, scene);
 
                 // Get draw groups for this feature
                 let layer_rules = rules[layer_name];
