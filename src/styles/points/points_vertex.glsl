@@ -29,7 +29,11 @@ void main() {
     #pragma tangram: feature-selection-vertex
 
     v_color = a_color;
-    v_texcoord = a_texcoord;
+
+    // Texture UVs
+    vec2 texcoord = a_texcoord;
+    #pragma tangram: texcoord
+    v_texcoord = texcoord;
 
     // Apply scaling in screen space
     vec4 shape = a_shape;

@@ -37,6 +37,7 @@ varying vec4 v_world_position;
 #ifdef TANGRAM_TEXTURE_COORDS
     attribute vec2 a_texcoord;
     varying vec2 v_texcoord;
+    vec2 texcoord;
 #endif
 
 #if defined(TANGRAM_LIGHTING_VERTEX)
@@ -54,7 +55,9 @@ void main() {
 
     // Texture UVs
     #ifdef TANGRAM_TEXTURE_COORDS
-        v_texcoord = a_texcoord;
+        texcoord = a_texcoord;
+        #pragma tangram: texcoord
+        v_texcoord = texcoord;
     #endif
 
     // Position

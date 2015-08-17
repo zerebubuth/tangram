@@ -123,7 +123,7 @@ void calculateNormal (inout vec3 _normal) {
     // Get NORMALMAP
     //------------------------------------------------
     #ifdef TANGRAM_MATERIAL_NORMAL_TEXTURE_UV
-    _normal += texture2D(u_material_normal_texture, fract(v_texcoord*material.normalScale.xy)).rgb*2.0-1.0;
+    _normal += texture2D(u_material_normal_texture, fract(texcoord*material.normalScale.xy)).rgb*2.0-1.0;
     #endif
 
     #ifdef TANGRAM_MATERIAL_NORMAL_TEXTURE_PLANAR
@@ -145,7 +145,7 @@ void calculateMaterial (in vec3 _eyeToPoint, inout vec3 _normal) {
     //------------------------------------------------
     #ifdef TANGRAM_MATERIAL_EMISSION_TEXTURE
         #ifdef TANGRAM_MATERIAL_EMISSION_TEXTURE_UV
-        material.emission *= texture2D(u_material_emission_texture,v_texcoord);
+        material.emission *= texture2D(u_material_emission_texture,texcoord);
         #endif
 
         #ifdef TANGRAM_MATERIAL_EMISSION_TEXTURE_PLANAR
@@ -165,7 +165,7 @@ void calculateMaterial (in vec3 _eyeToPoint, inout vec3 _normal) {
     //------------------------------------------------
     #ifdef TANGRAM_MATERIAL_AMBIENT_TEXTURE
         #ifdef TANGRAM_MATERIAL_AMBIENT_TEXTURE_UV
-        material.ambient *= texture2D(u_material_ambient_texture,v_texcoord);
+        material.ambient *= texture2D(u_material_ambient_texture,texcoord);
         #endif
 
         #ifdef TANGRAM_MATERIAL_AMBIENT_TEXTURE_PLANAR
@@ -185,7 +185,7 @@ void calculateMaterial (in vec3 _eyeToPoint, inout vec3 _normal) {
     //------------------------------------------------
     #ifdef TANGRAM_MATERIAL_DIFFUSE_TEXTURE
         #ifdef TANGRAM_MATERIAL_DIFFUSE_TEXTURE_UV
-        material.diffuse *= texture2D(u_material_diffuse_texture,v_texcoord);
+        material.diffuse *= texture2D(u_material_diffuse_texture,texcoord);
         #endif
 
         #ifdef TANGRAM_MATERIAL_DIFFUSE_TEXTURE_PLANAR
@@ -205,7 +205,7 @@ void calculateMaterial (in vec3 _eyeToPoint, inout vec3 _normal) {
     //------------------------------------------------
     #ifdef TANGRAM_MATERIAL_SPECULAR_TEXTURE
         #ifdef TANGRAM_MATERIAL_SPECULAR_TEXTURE_UV
-        material.specular *= texture2D(u_material_specular_texture,v_texcoord);
+        material.specular *= texture2D(u_material_specular_texture,texcoord);
         #endif
 
         #ifdef TANGRAM_MATERIAL_SPECULAR_TEXTURE_PLANAR

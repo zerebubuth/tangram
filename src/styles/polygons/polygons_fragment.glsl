@@ -12,6 +12,7 @@ varying vec4 v_world_position;
 
 #ifdef TANGRAM_TEXTURE_COORDS
     varying vec2 v_texcoord;
+    vec2 texcoord;
 #endif
 
 #if defined(TANGRAM_LIGHTING_VERTEX)
@@ -26,6 +27,10 @@ varying vec4 v_world_position;
 void main (void) {
     vec4 color = v_color;
     vec3 normal = v_normal;
+
+    #ifdef TANGRAM_TEXTURE_COORDS
+        texcoord = v_texcoord;
+    #endif
 
     #ifdef TANGRAM_MATERIAL_NORMAL_TEXTURE
         calculateNormal(normal);
