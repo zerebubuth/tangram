@@ -221,6 +221,26 @@ Utils.stringToFunction = function(val, wrap) {
     return val;
 };
 
+// Replace values in an object that match the form
+// `$feature.property` with a function that looks up the value of that property,
+// e.g. `function() { return feature.property }`
+Utils.substituteProperties = function(obj, replace_keys = false) {
+    // Convert string
+    if (typeof obj === 'string') {
+        if (obj.substr(0, 9) === '$feature.') {
+            let field = obj.substr(9);
+            obj = `function() { return feature.${field} }`;
+        }
+    }
+    // Loop through object properties
+    else if (typeof obj === 'object') {
+        for (let p in obj) {
+            obj[p] = Utils.substituteProperties(obj[p]);
+        }
+    }
+    return obj;
+};
+
 // Log wrapper, sends message to main thread for display, and includes worker id #
 Utils.log = function (level, ...msg) {
     level = level || 'info';

@@ -38,7 +38,6 @@ Utils.isWorkerThread && Object.assign(self, {
 
     // Starts a config refresh
     updateConfig ({ config, generation }) {
-        self.config = null;
         config = JSON.parse(config);
 
         self.generation = generation;
@@ -74,8 +73,13 @@ Utils.isWorkerThread && Object.assign(self, {
             }
         }
 
-        // Expand styles
-        self.config = Utils.stringsToFunctions(StyleParser.expandMacros(config), StyleParser.wrapFunction);
+        // Preprocessing/macros
+        config = Utils.substituteProperties(config);
+        config = StyleParser.expandMacros(config);
+        config = Utils.stringsToFunctions(config, StyleParser.wrapFunction);
+        self.config = config;
+
+        // Build styles
         self.styles = StyleManager.build(self.config.styles, { generation: self.generation });
 
         // Parse each top-level layer as a separate rule tree
