@@ -57,26 +57,57 @@ export default class Label {
         for (let i = 0; i < aabbs.length; ++i) {
             let aabb = aabbs[i];
             let obb0 = aabb.obb;
-
-            let dHalf = Vector.length(Vector.mult(Vector.sub(obb0.centroid, obb1.centroid), 0.5));
+            let dHalf = Vector.mult(Vector.sub(obb0.centroid, obb1.centroid), 0.5);
+            let dHalfLength = Vector.length(Vector.sub(obb0.centroid, dHalf));
             let w0 = Math.abs(obb0.quad[1][0] - obb0.quad[0][0]);
 
-            // skip obbs with half distance less than an obb width
-            if (dHalf > w0 + this.buffer && dHalf > w1 + this.buffer) {
+            //  obb0
+            // ______              obb1
+            // |    |    dhalf  _________
+            // |  ._|______.____|___.   |
+            // |    |           |_______|
+            // |____|
+            //  __._w0__.____.__w1__.____
+
+            // 1. skip obbs with half distance length longer than any obb width
+            if (dHalfLength > w0 + this.buffer && dHalfLength > w1 + this.buffer) {
                 continue;
             }
 
-            for (let j = 0; j < obb0.quad.length; ++j) {
-                let v0 = obb0.quad[j];
-                for (let k = 0; k < obb1.quad.length; ++k) {
-                    let v1 = obb1.quad[k];
-                    let d = Vector.length(Vector.sub(v0, v1));
+            // 2. find the two closest edges determined by the 4 closest points
+            let e0 = { v0: obb0.quad[0], v1: obb0.quad[1] };
+            let e1 = { v0: obb1.quad[0], v1: obb1.quad[1] };
+            let minD0 = Vector.length(Vector.sub(e0.v0, e1.v0));
+            let minD1 = Vector.length(Vector.sub(e0.v1, e1.v1));
 
-                    if (d < this.buffer) {
-                        return true;
+            for (let j = 1; j < 4; ++j) {
+                let v00 = obb0.quad[j];
+                let v01 = obb1.quad[(j+1) % 4];
+                let newEdge = false;
+
+                for let k = 1; k < 4; ++k) {
+                    let v10 = obb0.quad[k];
+                    let v11 = obb1.quad[(k+1) % 4];
+
+                    let d0 = Vector.length(Vector.sub(v00, v10));
+                    let d1 = Vector.length(Vector.sub(v01, v11));
+
+                    if (d0 < minD0 || d1 < minD1) {
+                        e1.v0 = v10;
+                        e1.v1 = v11;
+                        newEdge = true;
                     }
                 }
+
+                if (newEdge) {
+                    e0.v0 = v00;
+                    e0.v1 = v01;
+                }
             }
+
+            // 3. find the distance between the two edges
+            // p1 = e1.v0 + (vec(e0) dot vec(e1)) * norm (vec(e1))
+            // distance = norm (vec(p1,e1.v0))
         }
 
         return false;
