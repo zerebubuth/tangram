@@ -82,11 +82,11 @@ export default class Label {
 
             for (let j = 1; j < 4; ++j) {
                 let v00 = obb0.quad[j];
-                let v01 = obb1.quad[(j+1) % 4];
+                let v01 = obb0.quad[(j+1) % 4];
                 let newEdge = false;
 
-                for let k = 1; k < 4; ++k) {
-                    let v10 = obb0.quad[k];
+                for (let k = 1; k < 4; ++k) {
+                    let v10 = obb1.quad[k];
                     let v11 = obb1.quad[(k+1) % 4];
 
                     let d0 = Vector.length(Vector.sub(v00, v10));
@@ -106,8 +106,16 @@ export default class Label {
             }
 
             // 3. find the distance between the two edges
-            // p1 = e1.v0 + (vec(e0) dot vec(e1)) * norm (vec(e1))
-            // distance = norm (vec(p1,e1.v0))
+            let ve0 = Vector.sub(e0.v1, e0.v0);
+            let ve1 = Vector.sub(e1.v1, e1.v0);
+            let dve0ve1 = Math.abs(Vector.dot(ve0, ve1));
+
+            let p = Vector.add(e1.v0, Vector.mult(ve1, dve0ve1));
+            let d = Vector.length(Vector.sub(p, e1.v0));
+
+            if (d < this.buffer) {
+                return true;
+            }
         }
 
         return false;
