@@ -45,9 +45,9 @@ export default class Light {
     // Set light for a style: fragment lighting, vertex lighting, or none
     static setMode (mode, style) {
         if (mode === true) {
-            mode = 'fragment';
+            mode = Light.default;
         }
-        mode = Light.enabled && ((mode != null) ? mode : 'fragment'); // default to fragment lighting
+        mode = Light.enabled && ((mode != null) ? mode : Light.default);
         style.defines['TANGRAM_LIGHTING_FRAGMENT'] = (mode === 'fragment');
         style.defines['TANGRAM_LIGHTING_VERTEX'] = (mode === 'vertex');
     }
@@ -162,6 +162,7 @@ export default class Light {
 
 Light.types = {}; // references to subclasses by short name
 Light.block = 'lighting'; // shader block name
+Light.default = 'fragment'; // default lighting for scene if none set
 Light.enabled = true; // lighting can be globally enabled/disabled
 
 

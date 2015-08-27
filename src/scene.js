@@ -985,8 +985,10 @@ export default class Scene {
             this.config.cameras[camera_names[0]].active = true;
         }
 
-        this.config.lights = this.config.lights || {}; // ensure lights object
-        this.config.styles = this.config.styles || {}; // ensure styles object
+        // Ensure objects (avoid excess null checks)
+        this.config.scene = this.config.scene || {};
+        this.config.lights = this.config.lights || {};
+        this.config.styles = this.config.styles || {};
 
         return StyleManager.preload(this.config.styles, this.config_path);
     }
@@ -1128,6 +1130,12 @@ export default class Scene {
 
     // Create lighting
     createLights() {
+        // Set default lighting mode
+        if (this.config.scene.lighting) {
+            Light.default = this.config.scene.lighting;
+        }
+
+        // Create individual lights
         this.lights = {};
         for (let i in this.config.lights) {
             if (!this.config.lights[i] || typeof this.config.lights[i] !== 'object') {
@@ -1159,7 +1167,6 @@ export default class Scene {
     updateConfig({ rebuild } = {}) {
         this.generation++;
         this.updating++;
-        this.config.scene = this.config.scene || {};
         this.createCamera();
         this.createLights();
         this.loadDataSources();
