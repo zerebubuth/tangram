@@ -98,7 +98,9 @@ export default class VertexData {
     // Finalize vertex buffer for use in constructing a mesh
     end () {
         // Clip the buffer to size used for this VBO
-        this.buffer = this.buffer.subarray(0, this.buffer_offset);
+        var ab = this.buffer.buffer;
+        VertexData.array_pool.push(this.buffer); // save previous buffer for use by next tile
+        this.buffer = new Uint8Array(ab.slice(0, this.buffer_offset));
         log('trace', `VertexData: ${this.buffer_size} vertices total, realloc count ${this.realloc_count}`);
         return this;
     }
