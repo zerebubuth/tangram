@@ -107,8 +107,7 @@ Builders.buildExtrudedPolygons = function (
         ];
     }
 
-    var num_polygons = polygons.length; // when is this ever more than 1?
-    if (num_polygons > 1) console.log('polys:', num_polygons); // never seen it
+    var num_polygons = polygons.length; // when is this ever more than 1? occasionally
 
     for (var p=0; p < num_polygons; p++) {
         var polygon = polygons[p];
@@ -175,7 +174,8 @@ Builders.buildPolylines = function (
         scaling_normalize,
         normal_index,
         normal_normalize,
-        join, cap
+        join, cap,
+        baking
     }) {
 
     var cornersOnCap = (cap === "square") ? 2 : ((cap === "round") ? 3 : 0);  // Butt is the implicit default
@@ -201,7 +201,8 @@ Builders.buildPolylines = function (
         normal_index,
         normal_normalize,
         min_u, min_v, max_u, max_v,
-        nPairs: 0
+        nPairs: 0,
+        baking
     };
     for (var ln = 0; ln < lines.length; ln++) {
         var line = lines[ln];
@@ -344,18 +345,24 @@ Builders.buildPolylines = function (
 };
 
 // Add a vertex to the appropriate buffers (internal method for polyline builder)
-function addVertex (coord, normal, uv, { halfWidth, height, vertices, scalingVecs, texcoords}) {
+function addVertex (coord, normal, uv, { halfWidth, height, vertices, scalingVecs, texcoords, baking }) {
 
-    if (scalingVecs) {
+    if (!baking && scalingVecs) {
         // If scaling is on add the vertex (the currCoord) and the scaling Vecs (normals pointing where to extrude the vertices)
         vertices.push(coord);
 
         scalingVecs.push(normal);
 
-    } else {
+    } else if (baking && scalingVecs) {
         // this will "bake" the extruded vectors into the VBO, preventing real-time width changes
+        // this is useful for exporting line geometry
+        // todo - enable this with a flag passed as a parameter
         vertices.push([coord[0] + normal[0] * halfWidth,
-                       coord[1] + normal[1] * halfWidth]);
+                       coord[1] + normal[1] * halfWidth,
+                       coord[2]]);
+
+        scalingVecs.push(normal);
+
     }
 
     // Add UVs if they are enabled
@@ -365,10 +372,9 @@ function addVertex (coord, normal, uv, { halfWidth, height, vertices, scalingVec
 
 }
 
-//  Add equidistant pairs of vertices (internal method for polyline builder)
-//  The pairs of vertices are in opposite directions from the centerline - 
+// Add pairs of vertices (internal method for polyline builder) with normals in opposite directions from the centerline
+// If baking, the vertices will already be placed, and the scalingVecs will not be used to move the vertices
 function addVertexPair (coord, normal, v_pct, constants) {
-    // var constants = JSON.parse(JSON.stringify(constants1));
     // make a copy of coord to manipulate
     var coord2 = [coord[0], coord[1], 0];
 

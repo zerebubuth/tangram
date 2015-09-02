@@ -20,7 +20,7 @@ export default class VBOMesh  {
         this.data_usage = options.data_usage || this.gl.STATIC_DRAW;
         this.vertices_per_geometry = 3; // TODO: support lines, strip, fan, etc.
         this.uniforms = options.uniforms;
-        this.retain = options.retain || false; // whether to retain mesh data in CPU after uploading to GPU
+        this.retain = options.retain || true; // whether to retain mesh data in CPU after uploading to GPU
 
         this.vertex_count = this.vertex_data.byteLength / this.vertex_layout.stride;
         this.geometry_count = this.vertex_count / this.vertices_per_geometry;

@@ -238,7 +238,8 @@ Object.assign(Lines, {
                     normal_normalize: 127, // scale normals from shorts to signed bytes
                     closed_polygon: options && options.closed_polygon,
                     remove_tile_edges: !style.tile_edges && options && options.remove_tile_edges,
-                    tile_edge_tolerance: Geo.tile_scale * context.tile.pad_scale * 4
+                    tile_edge_tolerance: Geo.tile_scale * context.tile.pad_scale * 4,
+                    baking: true
                 }
             );
         }
