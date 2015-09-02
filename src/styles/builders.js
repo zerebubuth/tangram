@@ -159,7 +159,7 @@ Builders.buildExtrudedPolygons = function (
 
 // Build tessellated triangles for a polyline
 Builders.buildPolylines = function (
-    lines,
+    lines, z,
     width,
     height,
     vertex_data, vertex_template,

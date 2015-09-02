@@ -100,6 +100,8 @@ Object.assign(Lines, {
         //     style.z += style.height;
         // }
 
+        //todo: add z property to buildlines
+
         style.cap = rule_style.cap;
         style.join = rule_style.join;
         style.tile_edges = rule_style.tile_edges;
