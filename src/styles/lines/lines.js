@@ -226,6 +226,7 @@ Object.assign(Lines, {
                 lines,
                 style.width,
                 style.extrude || 0,
+                style.z || 0,
                 vertex_data,
                 vertex_template,
                 {

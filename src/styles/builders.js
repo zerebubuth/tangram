@@ -159,9 +159,10 @@ Builders.buildExtrudedPolygons = function (
 
 // Build tessellated triangles for a polyline
 Builders.buildPolylines = function (
-    lines, z,
+    lines,
     width,
     height,
+    z,
     vertex_data, vertex_template,
     {
         closed_polygon,
@@ -191,6 +192,7 @@ Builders.buildPolylines = function (
         vertex_template,
         halfWidth: width/2,
         height,
+        z,
         vertices: [],
         scaling_index,
         scaling_normalize,
@@ -354,9 +356,7 @@ function addVertex (coord, normal, uv, { halfWidth, height, vertices, scalingVec
         scalingVecs.push(normal);
 
     } else if (baking && scalingVecs) {
-        // this will "bake" the extruded vectors into the VBO, preventing real-time width changes
-        // this is useful for exporting line geometry
-        // todo - enable this with a flag passed as a parameter
+        // this will "bake" the extruded vectors into the VBO, preventing real-time width changes - this is necessary for exporting line geometry
         vertices.push([coord[0] + normal[0] * halfWidth,
                        coord[1] + normal[1] * halfWidth,
                        coord[2]]);
@@ -376,7 +376,7 @@ function addVertex (coord, normal, uv, { halfWidth, height, vertices, scalingVec
 // If baking, the vertices will already be placed, and the scalingVecs will not be used to move the vertices
 function addVertexPair (coord, normal, v_pct, constants) {
     // make a copy of coord to manipulate
-    var coord2 = [coord[0], coord[1], 0];
+    var coord2 = [coord[0], coord[1], constants.z];
 
     // make a pair of vertices with opposite normals
     addVertex(coord2, normal, [constants.max_u, (1-v_pct)*constants.min_v + v_pct*constants.max_v], constants);
@@ -385,7 +385,7 @@ function addVertexPair (coord, normal, v_pct, constants) {
     // if the polyline is elevated, make an elevated duplicate pair
     if (constants.height > 0) {
 
-        coord2 = [coord[0], coord[1], constants.height];
+        coord2 = [coord[0], coord[1], constants.height + constants.z];
 
         // make an elevated pair for the wall tops
         addVertex(coord2, normal, [constants.max_u, (1-v_pct)*constants.min_v + v_pct*constants.max_v], constants);
