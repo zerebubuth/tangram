@@ -102,6 +102,11 @@ export default class DataSource {
                                 coord[0] = Math.round(coord[0] * (1 + this.pad_scale) - (Geo.tile_scale * this.pad_scale/2));
                                 coord[1] = Math.round(coord[1] * (1 + this.pad_scale) - (Geo.tile_scale * this.pad_scale/2));
                             }
+
+                            // Clamp range of vertex positions, to fit in signed shorts in VBO
+                            // Note: this is a naive clamp, not proper geometry clipping
+                            coord[0] = Math.max(Math.min(coord[0], Geo.tile_scale * 4), -Geo.tile_scale * 4);
+                            coord[1] = Math.max(Math.min(coord[1], Geo.tile_scale * 4), -Geo.tile_scale * 4);
                         });
 
                         // Optionally enforce winding order since not all data sources guarantee it
