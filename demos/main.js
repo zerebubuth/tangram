@@ -585,7 +585,7 @@ Enjoy!
 
             initFeatureSelection();
         });
-        layer.addTo(map);
+        layer.addTo(map).bringToFront();
 
         if (osm_debug == true) {
             window.osm_layer =
