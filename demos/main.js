@@ -590,10 +590,10 @@ Enjoy!
         if (osm_debug == true) {
             window.osm_layer =
                 L.tileLayer(
-                    'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    { opacity: 0.5 })
-                .bringToFront()
-                .addTo(map);
+                    'http://{s}.tile.stamen.com/toner-lite/{z}/{x}/{y}.png',
+                    { opacity: 1 })
+                .addTo(map)
+                .bringToBack();
         }
     });
 
