@@ -245,7 +245,8 @@ export default class Scene {
 
         try {
             this.gl = Context.getContext(this.canvas, {
-                alpha: false /*premultipliedAlpha: false*/,
+                // alpha: false,
+                premultipliedAlpha: false,
                 device_pixel_ratio: Utils.device_pixel_ratio
             });
         }
@@ -672,7 +673,7 @@ export default class Scene {
         // Transparent styles: depth test off, depth write on, custom blending
         styles = Object.keys(this.active_styles).filter(s => this.styles[s].blend === 'add');
         if (styles.length > 0) {
-            this.setRenderState({ depth_test: true, depth_write: false, alpha_blend: (allow_alpha_blend && 'add') });
+            // this.setRenderState({ depth_test: true, depth_write: false, alpha_blend: (allow_alpha_blend && 'add') });
             count += this.renderStyles(styles, program_key);
         }
 
@@ -785,7 +786,8 @@ export default class Scene {
         let gl = this.gl;
 
         if (clear_color) {
-            gl.clearColor(...this.background.color);
+            // gl.clearColor(...this.background.color);
+            gl.clearColor(0.0, .0, 0., .0);
         }
 
         if (clear_depth) {
@@ -1103,7 +1105,7 @@ export default class Scene {
             this.background.color = StyleParser.parseColor(bg.color);
         }
         if (!this.background.color) {
-            this.background.color = [0, 0, 0, 1]; // default background to black
+            this.background.color = [0, 0, 0, 0]; // default background to black
         }
     }
 

@@ -66,7 +66,7 @@ Enjoy!
     },
     default_tile_source = 'mapzen',
     scene_url = 'demos/scene.yaml',
-    osm_debug = false,
+    osm_debug = true,
     locations = {
         'London': [51.508, -0.105, 15],
         'New York': [40.70531887544228, -74.00976419448853, 16],
